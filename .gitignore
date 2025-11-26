@@ -32,3 +32,9 @@ build/
 ### VS Code ###
 .vscode/
 *.exe
+
+### Sensitive files (credentials) ###
+.env
+deploy/application.yml
+application-local.yml
+**/application-local.yml

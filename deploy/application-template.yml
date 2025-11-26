@@ -1,0 +1,163 @@
+# Template de configuration - Ne pas utiliser en production
+# Copier ce fichier vers application.yml et remplacer les valeurs par les vraies credentials
+# Mieux : utiliser des variables d'environnement
+
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:sqlserver://localhost\\SQLEXPRESS;databaseName=ATHENEO_MISMO;encrypt=false}
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    username: ${DB_USERNAME:}
+    password: ${DB_PASSWORD:}
+
+  jpa:
+    show-sql: ${JPA_SHOW_SQL:false}
+    hibernate:
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+# Configuration du logging
+logging:
+  pattern:
+    console: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n'
+  level:
+    root: INFO
+    fr.mismo: ${LOG_LEVEL_MISMO:INFO}
+    org.springframework: INFO
+
+# Configuration des tâches planifiées (format cron)
+# Utiliser "-" pour désactiver une tâche
+cron:
+  Logging: ${CRON_LOGGING:-}
+  Customer: ${CRON_CUSTOMER:-}
+  Entries: ${CRON_ENTRIES:*/10 * * * * *}
+  Deadlines: ${CRON_DEADLINES:-}
+  Account: ${CRON_ACCOUNT:-}
+  Journals: ${CRON_JOURNALS:-}
+  Analytic: ${CRON_ANALYTIC:-}
+  Payment: ${CRON_PAYMENT:-}
+  Product: ${CRON_PRODUCT:-}
+
+# Configuration serveur
+server:
+  port: ${SERVER_PORT:8093}
+  servlet:
+    context-path: ${CONTEXT_PATH:/api/v1}
+    session:
+      timeout: 60s
+
+# Configuration API Pennylane
+api:
+  url_v1: ${PENNYLANE_API_V1:https://app.pennylane.com/api/external/v1/}
+  url_v2: ${PENNYLANE_API_V2:https://app.pennylane.com/api/external/v2/}
+
+# Configuration des logs applicatifs
+Log:
+  niveau:
+    ERROR: 'Erreur '
+    WARN: 'Avertissement '
+    INFO: 'Information '
+    DEBUG: 'Debug '
+    TRACE: 'Détail '
+  Actif: ${LOG_ACTIF:true}
+  Initiateur: 'INTERFACE_PENNYLANE'
+
+# Configuration du service de documents SOAP
+wsdocument:
+  defaultUri: ${WSDOCUMENT_URI:http://localhost:8081/WSDocumentAth/WSDocumentAth.svc}
+  proprieteDocument:
+    typeDocument: PENNYLANE
+    auteurDocument: ADMIN
+  login: ${WSDOCUMENT_LOGIN:}
+  password: ${WSDOCUMENT_PASSWORD:}
+  timeouts:
+    readTimeout: 60000
+    connectionTimeout: 60000
+
+# Configuration Spring Boot Actuator pour monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: interface-pennylane
+  health:
+    db:
+      enabled: true
+
+# Configuration Resilience4j pour la résilience
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 30s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+    instances:
+      pennylane-api:
+        baseConfig: default
+        slidingWindowSize: 20
+        minimumNumberOfCalls: 10
+        failureRateThreshold: 40
+      wsdocument:
+        baseConfig: default
+        waitDurationInOpenState: 60s
+
+  retry:
+    configs:
+      default:
+        maxAttempts: 3
+        waitDuration: 1000ms
+        retryExceptions:
+          - org.springframework.web.client.ResourceAccessException
+          - org.springframework.web.client.HttpServerErrorException
+    instances:
+      pennylane-api:
+        baseConfig: default
+        maxAttempts: 4
+        waitDuration: 2000ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+      wsdocument:
+        baseConfig: default
+        maxAttempts: 3
+
+  ratelimiter:
+    configs:
+      default:
+        registerHealthIndicator: true
+        limitForPeriod: 2
+        limitRefreshPeriod: 1s
+        timeoutDuration: 0
+    instances:
+      pennylane-api:
+        limitForPeriod: 2
+        limitRefreshPeriod: 1s
+        timeoutDuration: 5s
+
+# Configuration de la sécurité
+security:
+  user:
+    name: ${SECURITY_USERNAME:admin}
+    password: ${SECURITY_PASSWORD:changeme}
+  basic:
+    enabled: ${SECURITY_ENABLED:true}
