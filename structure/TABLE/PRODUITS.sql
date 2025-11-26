@@ -1,0 +1,9 @@
+-- Vérifier si les colonnes existent déjà pour éviter les erreurs
+IF NOT EXISTS (
+    SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_NAME = 'PRODUITS' AND COLUMN_NAME = 'PENNYLANE_ID'
+)
+BEGIN
+    -- Ajouter la colonne 'PENNYLANE_ID' de type VARCHAR(255)
+    ALTER TABLE PRODUITS ADD PENNYLANE_ID VARCHAR(255);
+END;

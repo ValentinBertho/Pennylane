@@ -1,0 +1,568 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wsdl:definitions name="WSDocumentAth" targetNamespace="http://mismo.fr/WSDocumentAth" 
+    xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" 
+    xmlns:wsx="http://schemas.xmlsoap.org/ws/2004/09/mex" 
+    xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd" 
+    xmlns:wsa10="http://www.w3.org/2005/08/addressing" 
+    xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy" 
+    xmlns:wsap="http://schemas.xmlsoap.org/ws/2004/08/addressing/policy" 
+    xmlns:msc="http://schemas.microsoft.com/ws/2005/12/wsdl/contract" 
+    xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" 
+    xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing" 
+    xmlns:wsam="http://www.w3.org/2007/05/addressing/metadata" 
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+    xmlns:tns="http://mismo.fr/WSDocumentAth" 
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" 
+    xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl" 
+    xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/">
+    <wsdl:types>
+        <xsd:schema targetNamespace="http://mismo.fr/WSDocumentAth/Imports">
+            <xsd:import schemaLocation="WSDocumentAth0.xsd" namespace="http://mismo.fr/WSDocumentAth"/>
+            <xsd:import schemaLocation="WSDocumentAth1.xsd" namespace="http://schemas.microsoft.com/2003/10/Serialization/"/>
+            <xsd:import schemaLocation="WSDocumentAth2.xsd" namespace="http://schemas.datacontract.org/2004/07/S"/>
+            <xsd:import schemaLocation="WSDocumentAth3.xsd" namespace="http://schemas.microsoft.com/2003/10/Serialization/Arrays"/>
+        </xsd:schema>
+    </wsdl:types>
+    <wsdl:message name="IWSDocumentAth_GetData_InputMessage">
+        <wsdl:part name="parameters" element="tns:GetData"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_GetData_OutputMessage">
+        <wsdl:part name="parameters" element="tns:GetDataResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_CreerDocInfo_InputMessage">
+        <wsdl:part name="parameters" element="tns:CreerDocInfo"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_CreerDocInfo_OutputMessage">
+        <wsdl:part name="parameters" element="tns:CreerDocInfoResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_CreerDocVersion_InputMessage">
+        <wsdl:part name="parameters" element="tns:CreerDocVersion"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_CreerDocVersion_OutputMessage">
+        <wsdl:part name="parameters" element="tns:CreerDocVersionResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_PublierDoc_InputMessage">
+        <wsdl:part name="parameters" element="tns:PublierDoc"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_PublierDoc_OutputMessage">
+        <wsdl:part name="parameters" element="tns:PublierDocResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_Lister_InputMessage">
+        <wsdl:part name="parameters" element="tns:Lister"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_Lister_OutputMessage">
+        <wsdl:part name="parameters" element="tns:ListerResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_ChargerDocInfo_InputMessage">
+        <wsdl:part name="parameters" element="tns:ChargerDocInfo"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_ChargerDocInfo_OutputMessage">
+        <wsdl:part name="parameters" element="tns:ChargerDocInfoResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_ListerDocVersion_InputMessage">
+        <wsdl:part name="parameters" element="tns:ListerDocVersion"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_ListerDocVersion_OutputMessage">
+        <wsdl:part name="parameters" element="tns:ListerDocVersionResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_ChargerDocVersion_InputMessage">
+        <wsdl:part name="parameters" element="tns:ChargerDocVersion"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_ChargerDocVersion_OutputMessage">
+        <wsdl:part name="parameters" element="tns:ChargerDocVersionResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_Telecharger_InputMessage">
+        <wsdl:part name="parameters" element="tns:Telecharger"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_Telecharger_OutputMessage">
+        <wsdl:part name="parameters" element="tns:TelechargerResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_TelechargerParId_InputMessage">
+        <wsdl:part name="parameters" element="tns:TelechargerParId"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_TelechargerParId_OutputMessage">
+        <wsdl:part name="parameters" element="tns:TelechargerParIdResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_ModifierInfoDoc_InputMessage">
+        <wsdl:part name="parameters" element="tns:ModifierInfoDoc"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_ModifierInfoDoc_OutputMessage">
+        <wsdl:part name="parameters" element="tns:ModifierInfoDocResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_EnvoyerMailDoc_InputMessage">
+        <wsdl:part name="parameters" element="tns:EnvoyerMailDoc"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_EnvoyerMailDoc_OutputMessage">
+        <wsdl:part name="parameters" element="tns:EnvoyerMailDocResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_ReserverDoc_InputMessage">
+        <wsdl:part name="parameters" element="tns:ReserverDoc"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_ReserverDoc_OutputMessage">
+        <wsdl:part name="parameters" element="tns:ReserverDocResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_LibererDoc_InputMessage">
+        <wsdl:part name="parameters" element="tns:LibererDoc"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_LibererDoc_OutputMessage">
+        <wsdl:part name="parameters" element="tns:LibererDocResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_LibererDocParId_InputMessage">
+        <wsdl:part name="parameters" element="tns:LibererDocParId"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_LibererDocParId_OutputMessage">
+        <wsdl:part name="parameters" element="tns:LibererDocParIdResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_ReserverDocParId_InputMessage">
+        <wsdl:part name="parameters" element="tns:ReserverDocParId"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_ReserverDocParId_OutputMessage">
+        <wsdl:part name="parameters" element="tns:ReserverDocParIdResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_MajEtatDocInfo_InputMessage">
+        <wsdl:part name="parameters" element="tns:MajEtatDocInfo"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_MajEtatDocInfo_OutputMessage">
+        <wsdl:part name="parameters" element="tns:MajEtatDocInfoResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_MajInfoEzgedDansAth_InputMessage">
+        <wsdl:part name="parameters" element="tns:MajInfoEzgedDansAth"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_MajInfoEzgedDansAth_OutputMessage">
+        <wsdl:part name="parameters" element="tns:MajInfoEzgedDansAthResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_ConfirmerSuppressionEzgedDocInfo_InputMessage">
+        <wsdl:part name="parameters" element="tns:ConfirmerSuppressionEzgedDocInfo"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_ConfirmerSuppressionEzgedDocInfo_OutputMessage">
+        <wsdl:part name="parameters" element="tns:ConfirmerSuppressionEzgedDocInfoResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_LireInfoEzgedDansAth_InputMessage">
+        <wsdl:part name="parameters" element="tns:LireInfoEzgedDansAth"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_LireInfoEzgedDansAth_OutputMessage">
+        <wsdl:part name="parameters" element="tns:LireInfoEzgedDansAthResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_SupprimerDoc_InputMessage">
+        <wsdl:part name="parameters" element="tns:SupprimerDoc"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_SupprimerDoc_OutputMessage">
+        <wsdl:part name="parameters" element="tns:SupprimerDocResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_SupprimerDocVersion_InputMessage">
+        <wsdl:part name="parameters" element="tns:SupprimerDocVersion"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_SupprimerDocVersion_OutputMessage">
+        <wsdl:part name="parameters" element="tns:SupprimerDocVersionResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_ValiderDoc_InputMessage">
+        <wsdl:part name="parameters" element="tns:ValiderDoc"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_ValiderDoc_OutputMessage">
+        <wsdl:part name="parameters" element="tns:ValiderDocResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_AjoutDocVersionDansCourrierSynchro_InputMessage">
+        <wsdl:part name="parameters" element="tns:AjoutDocVersionDansCourrierSynchro"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_AjoutDocVersionDansCourrierSynchro_OutputMessage">
+        <wsdl:part name="parameters" element="tns:AjoutDocVersionDansCourrierSynchroResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_SupprimerDocVersionDansCourrierSynchro_InputMessage">
+        <wsdl:part name="parameters" element="tns:SupprimerDocVersionDansCourrierSynchro"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_SupprimerDocVersionDansCourrierSynchro_OutputMessage">
+        <wsdl:part name="parameters" element="tns:SupprimerDocVersionDansCourrierSynchroResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_RecupererListeAjoutSynchro_InputMessage">
+        <wsdl:part name="parameters" element="tns:RecupererListeAjoutSynchro"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_RecupererListeAjoutSynchro_OutputMessage">
+        <wsdl:part name="parameters" element="tns:RecupererListeAjoutSynchroResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_RecupererListeSuppressionSynchro_InputMessage">
+        <wsdl:part name="parameters" element="tns:RecupererListeSuppressionSynchro"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_RecupererListeSuppressionSynchro_OutputMessage">
+        <wsdl:part name="parameters" element="tns:RecupererListeSuppressionSynchroResponse"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_ControlerDeplacerCheminDoc_InputMessage">
+        <wsdl:part name="parameters" element="tns:ControlerDeplacerCheminDoc"/>
+    </wsdl:message>
+    <wsdl:message name="IWSDocumentAth_ControlerDeplacerCheminDoc_OutputMessage">
+        <wsdl:part name="parameters" element="tns:ControlerDeplacerCheminDocResponse"/>
+    </wsdl:message>
+    <wsdl:portType name="IWSDocumentAth">
+        <wsdl:operation name="GetData">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/GetData" message="tns:IWSDocumentAth_GetData_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/GetDataResponse" message="tns:IWSDocumentAth_GetData_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="CreerDocInfo">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/CreerDocInfo" message="tns:IWSDocumentAth_CreerDocInfo_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/CreerDocInfoResponse" message="tns:IWSDocumentAth_CreerDocInfo_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="CreerDocVersion">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/CreerDocVersion" message="tns:IWSDocumentAth_CreerDocVersion_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/CreerDocVersionResponse" message="tns:IWSDocumentAth_CreerDocVersion_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="PublierDoc">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/PublierDoc" message="tns:IWSDocumentAth_PublierDoc_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/PublierDocResponse" message="tns:IWSDocumentAth_PublierDoc_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="Lister">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/Lister" message="tns:IWSDocumentAth_Lister_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ListerResponse" message="tns:IWSDocumentAth_Lister_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="ChargerDocInfo">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ChargerDocInfo" message="tns:IWSDocumentAth_ChargerDocInfo_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ChargerDocInfoResponse" message="tns:IWSDocumentAth_ChargerDocInfo_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="ListerDocVersion">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ListerDocVersion" message="tns:IWSDocumentAth_ListerDocVersion_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ListerDocVersionResponse" message="tns:IWSDocumentAth_ListerDocVersion_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="ChargerDocVersion">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ChargerDocVersion" message="tns:IWSDocumentAth_ChargerDocVersion_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ChargerDocVersionResponse" message="tns:IWSDocumentAth_ChargerDocVersion_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="Telecharger">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/Telecharger" message="tns:IWSDocumentAth_Telecharger_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/TelechargerResponse" message="tns:IWSDocumentAth_Telecharger_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="TelechargerParId">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/TelechargerParId" message="tns:IWSDocumentAth_TelechargerParId_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/TelechargerParIdResponse" message="tns:IWSDocumentAth_TelechargerParId_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="ModifierInfoDoc">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ModifierInfoDoc" message="tns:IWSDocumentAth_ModifierInfoDoc_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ModifierInfoDocResponse" message="tns:IWSDocumentAth_ModifierInfoDoc_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="EnvoyerMailDoc">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/EnvoyerMailDoc" message="tns:IWSDocumentAth_EnvoyerMailDoc_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/EnvoyerMailDocResponse" message="tns:IWSDocumentAth_EnvoyerMailDoc_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="ReserverDoc">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ReserverDoc" message="tns:IWSDocumentAth_ReserverDoc_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ReserverDocResponse" message="tns:IWSDocumentAth_ReserverDoc_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="LibererDoc">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/LibererDoc" message="tns:IWSDocumentAth_LibererDoc_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/LibererDocResponse" message="tns:IWSDocumentAth_LibererDoc_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="LibererDocParId">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/LibererDocParId" message="tns:IWSDocumentAth_LibererDocParId_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/LibererDocParIdResponse" message="tns:IWSDocumentAth_LibererDocParId_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="ReserverDocParId">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ReserverDocParId" message="tns:IWSDocumentAth_ReserverDocParId_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ReserverDocParIdResponse" message="tns:IWSDocumentAth_ReserverDocParId_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="MajEtatDocInfo">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/MajEtatDocInfo" message="tns:IWSDocumentAth_MajEtatDocInfo_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/MajEtatDocInfoResponse" message="tns:IWSDocumentAth_MajEtatDocInfo_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="MajInfoEzgedDansAth">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/MajInfoEzgedDansAth" message="tns:IWSDocumentAth_MajInfoEzgedDansAth_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/MajInfoEzgedDansAthResponse" message="tns:IWSDocumentAth_MajInfoEzgedDansAth_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="ConfirmerSuppressionEzgedDocInfo">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ConfirmerSuppressionEzgedDocInfo" message="tns:IWSDocumentAth_ConfirmerSuppressionEzgedDocInfo_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ConfirmerSuppressionEzgedDocInfoResponse" message="tns:IWSDocumentAth_ConfirmerSuppressionEzgedDocInfo_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="LireInfoEzgedDansAth">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/LireInfoEzgedDansAth" message="tns:IWSDocumentAth_LireInfoEzgedDansAth_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/LireInfoEzgedDansAthResponse" message="tns:IWSDocumentAth_LireInfoEzgedDansAth_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="SupprimerDoc">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/SupprimerDoc" message="tns:IWSDocumentAth_SupprimerDoc_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/SupprimerDocResponse" message="tns:IWSDocumentAth_SupprimerDoc_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="SupprimerDocVersion">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/SupprimerDocVersion" message="tns:IWSDocumentAth_SupprimerDocVersion_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/SupprimerDocVersionResponse" message="tns:IWSDocumentAth_SupprimerDocVersion_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="ValiderDoc">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ValiderDoc" message="tns:IWSDocumentAth_ValiderDoc_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ValiderDocResponse" message="tns:IWSDocumentAth_ValiderDoc_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="AjoutDocVersionDansCourrierSynchro">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/AjoutDocVersionDansCourrierSynchro" message="tns:IWSDocumentAth_AjoutDocVersionDansCourrierSynchro_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/AjoutDocVersionDansCourrierSynchroResponse" message="tns:IWSDocumentAth_AjoutDocVersionDansCourrierSynchro_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="SupprimerDocVersionDansCourrierSynchro">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/SupprimerDocVersionDansCourrierSynchro" message="tns:IWSDocumentAth_SupprimerDocVersionDansCourrierSynchro_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/SupprimerDocVersionDansCourrierSynchroResponse" message="tns:IWSDocumentAth_SupprimerDocVersionDansCourrierSynchro_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="RecupererListeAjoutSynchro">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/RecupererListeAjoutSynchro" message="tns:IWSDocumentAth_RecupererListeAjoutSynchro_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/RecupererListeAjoutSynchroResponse" message="tns:IWSDocumentAth_RecupererListeAjoutSynchro_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="RecupererListeSuppressionSynchro">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/RecupererListeSuppressionSynchro" message="tns:IWSDocumentAth_RecupererListeSuppressionSynchro_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/RecupererListeSuppressionSynchroResponse" message="tns:IWSDocumentAth_RecupererListeSuppressionSynchro_OutputMessage"/>
+        </wsdl:operation>
+        <wsdl:operation name="ControlerDeplacerCheminDoc">
+            <wsdl:input wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ControlerDeplacerCheminDoc" message="tns:IWSDocumentAth_ControlerDeplacerCheminDoc_InputMessage"/>
+            <wsdl:output wsaw:Action="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ControlerDeplacerCheminDocResponse" message="tns:IWSDocumentAth_ControlerDeplacerCheminDoc_OutputMessage"/>
+        </wsdl:operation>
+    </wsdl:portType>
+    <wsdl:binding name="BasicHttpBinding_IWSDocumentAth" type="tns:IWSDocumentAth">
+        <soap:binding transport="http://schemas.xmlsoap.org/soap/http"/>
+        <wsdl:operation name="GetData">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/GetData" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="CreerDocInfo">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/CreerDocInfo" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="CreerDocVersion">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/CreerDocVersion" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="PublierDoc">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/PublierDoc" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="Lister">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/Lister" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="ChargerDocInfo">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ChargerDocInfo" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="ListerDocVersion">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ListerDocVersion" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="ChargerDocVersion">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ChargerDocVersion" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="Telecharger">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/Telecharger" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="TelechargerParId">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/TelechargerParId" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="ModifierInfoDoc">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ModifierInfoDoc" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="EnvoyerMailDoc">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/EnvoyerMailDoc" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="ReserverDoc">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ReserverDoc" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="LibererDoc">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/LibererDoc" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="LibererDocParId">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/LibererDocParId" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="ReserverDocParId">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ReserverDocParId" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="MajEtatDocInfo">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/MajEtatDocInfo" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="MajInfoEzgedDansAth">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/MajInfoEzgedDansAth" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="ConfirmerSuppressionEzgedDocInfo">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ConfirmerSuppressionEzgedDocInfo" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="LireInfoEzgedDansAth">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/LireInfoEzgedDansAth" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="SupprimerDoc">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/SupprimerDoc" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="SupprimerDocVersion">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/SupprimerDocVersion" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="ValiderDoc">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ValiderDoc" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="AjoutDocVersionDansCourrierSynchro">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/AjoutDocVersionDansCourrierSynchro" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="SupprimerDocVersionDansCourrierSynchro">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/SupprimerDocVersionDansCourrierSynchro" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="RecupererListeAjoutSynchro">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/RecupererListeAjoutSynchro" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="RecupererListeSuppressionSynchro">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/RecupererListeSuppressionSynchro" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="ControlerDeplacerCheminDoc">
+            <soap:operation soapAction="http://mismo.fr/WSDocumentAth/IWSDocumentAth/ControlerDeplacerCheminDoc" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+    </wsdl:binding>
+    <wsdl:service name="WSDocumentAth">
+        <wsdl:port name="BasicHttpBinding_IWSDocumentAth" binding="tns:BasicHttpBinding_IWSDocumentAth">
+            <soap:address location="http://athiislan.devtest.local:8080/WSDocumentAth/WSDocumentAth.svc"/>
+        </wsdl:port>
+    </wsdl:service>
+</wsdl:definitions>

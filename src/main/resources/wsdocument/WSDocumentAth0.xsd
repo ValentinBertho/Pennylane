@@ -1,0 +1,412 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema elementFormDefault="qualified" targetNamespace="http://mismo.fr/WSDocumentAth" 
+    xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+    xmlns:tns="http://mismo.fr/WSDocumentAth">
+    <xs:import schemaLocation="WSDocumentAth2.xsd" namespace="http://schemas.datacontract.org/2004/07/S"/>
+    <xs:element name="GetData">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="value" type="xs:int"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="GetDataResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="GetDataResult" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="CreerDocInfo">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="doc" nillable="true" type="q1:DocInfo" 
+                    xmlns:q1="http://schemas.datacontract.org/2004/07/S"/>
+                <xs:element minOccurs="0" name="utilisateur" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="CreerDocInfoResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="CreerDocInfoResult" type="xs:int"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="CreerDocVersion">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="doc" nillable="true" type="q2:DocVersion" 
+                    xmlns:q2="http://schemas.datacontract.org/2004/07/S"/>
+                <xs:element minOccurs="0" name="utilisateur" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="CreerDocVersionResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="CreerDocVersionResult" type="xs:int"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="PublierDoc">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="idDocVersion" type="xs:int"/>
+                <xs:element minOccurs="0" name="fichier" nillable="true" type="xs:string"/>
+                <xs:element minOccurs="0" name="utilisateur" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="PublierDocResponse">
+        <xs:complexType>
+            <xs:sequence/>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="Lister">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="utilisateur" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="ListerResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="ListerResult" nillable="true" type="q3:ArrayOfDocInfo" 
+                    xmlns:q3="http://schemas.datacontract.org/2004/07/S"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="ChargerDocInfo">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="idDocInfo" type="xs:int"/>
+                <xs:element minOccurs="0" name="utilisateur" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="ChargerDocInfoResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="ChargerDocInfoResult" nillable="true" type="q4:DocInfo" 
+                    xmlns:q4="http://schemas.datacontract.org/2004/07/S"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="ListerDocVersion">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="idDocInfo" type="xs:int"/>
+                <xs:element minOccurs="0" name="utilisateur" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="ListerDocVersionResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="ListerDocVersionResult" nillable="true" type="q5:ArrayOfDocVersion" 
+                    xmlns:q5="http://schemas.datacontract.org/2004/07/S"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="ChargerDocVersion">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="idDocVersion" type="xs:int"/>
+                <xs:element minOccurs="0" name="utilisateur" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="ChargerDocVersionResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="ChargerDocVersionResult" nillable="true" type="q6:DocVersion" 
+                    xmlns:q6="http://schemas.datacontract.org/2004/07/S"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="Telecharger">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="docVersion" nillable="true" type="q7:DocVersion" 
+                    xmlns:q7="http://schemas.datacontract.org/2004/07/S"/>
+                <xs:element minOccurs="0" name="utilisateur" nillable="true" type="xs:string"/>
+                <xs:element minOccurs="0" name="position" type="xs:int"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="TelechargerResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="TelechargerResult" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="TelechargerParId">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="idDocVersion" type="xs:int"/>
+                <xs:element minOccurs="0" name="utilisateur" nillable="true" type="xs:string"/>
+                <xs:element minOccurs="0" name="position" type="xs:int"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="TelechargerParIdResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="TelechargerParIdResult" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="ModifierInfoDoc">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="docInfo" nillable="true" type="q8:DocInfo" 
+                    xmlns:q8="http://schemas.datacontract.org/2004/07/S"/>
+                <xs:element minOccurs="0" name="utilisateur" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="ModifierInfoDocResponse">
+        <xs:complexType>
+            <xs:sequence/>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="EnvoyerMailDoc">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="mailAEnvoyer" nillable="true" type="q9:Mail" 
+                    xmlns:q9="http://schemas.datacontract.org/2004/07/S"/>
+                <xs:element minOccurs="0" name="docVersion" nillable="true" type="q10:ArrayOfDocVersion" 
+                    xmlns:q10="http://schemas.datacontract.org/2004/07/S"/>
+                <xs:element minOccurs="0" name="utilisateur" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="EnvoyerMailDocResponse">
+        <xs:complexType>
+            <xs:sequence/>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="ReserverDoc">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="docInfo" nillable="true" type="q11:DocInfo" 
+                    xmlns:q11="http://schemas.datacontract.org/2004/07/S"/>
+                <xs:element minOccurs="0" name="utilisateur" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="ReserverDocResponse">
+        <xs:complexType>
+            <xs:sequence/>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="LibererDoc">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="docInfo" nillable="true" type="q12:DocInfo" 
+                    xmlns:q12="http://schemas.datacontract.org/2004/07/S"/>
+                <xs:element minOccurs="0" name="utilisateur" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="LibererDocResponse">
+        <xs:complexType>
+            <xs:sequence/>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="LibererDocParId">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="idDocInfo" type="xs:int"/>
+                <xs:element minOccurs="0" name="utilisateur" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="LibererDocParIdResponse">
+        <xs:complexType>
+            <xs:sequence/>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="ReserverDocParId">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="idDocInfo" type="xs:int"/>
+                <xs:element minOccurs="0" name="utilisateur" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="ReserverDocParIdResponse">
+        <xs:complexType>
+            <xs:sequence/>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="MajEtatDocInfo">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="docInfo" nillable="true" type="q13:DocInfo" 
+                    xmlns:q13="http://schemas.datacontract.org/2004/07/S"/>
+                <xs:element minOccurs="0" name="utilisateur" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="MajEtatDocInfoResponse">
+        <xs:complexType>
+            <xs:sequence/>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="MajInfoEzgedDansAth">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="docInfo" nillable="true" type="q14:EzgedDocInfo" 
+                    xmlns:q14="http://schemas.datacontract.org/2004/07/S"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="MajInfoEzgedDansAthResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="MajInfoEzgedDansAthResult" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="ConfirmerSuppressionEzgedDocInfo">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="idDocVersion" type="xs:int"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="ConfirmerSuppressionEzgedDocInfoResponse">
+        <xs:complexType>
+            <xs:sequence/>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="LireInfoEzgedDansAth">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="idDocVersion" type="xs:int"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="LireInfoEzgedDansAthResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="LireInfoEzgedDansAthResult" nillable="true" type="q15:EzgedDocInfo" 
+                    xmlns:q15="http://schemas.datacontract.org/2004/07/S"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="SupprimerDoc">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="idDocInfo" type="xs:int"/>
+                <xs:element minOccurs="0" name="utilisateur" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="SupprimerDocResponse">
+        <xs:complexType>
+            <xs:sequence/>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="SupprimerDocVersion">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="idDocVersion" type="xs:int"/>
+                <xs:element minOccurs="0" name="utilisateur" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="SupprimerDocVersionResponse">
+        <xs:complexType>
+            <xs:sequence/>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="ValiderDoc">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="idDocInfo" type="xs:int"/>
+                <xs:element minOccurs="0" name="utilisateur" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="ValiderDocResponse">
+        <xs:complexType>
+            <xs:sequence/>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="AjoutDocVersionDansCourrierSynchro">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="docSynchro" nillable="true" type="q16:DocSynchro" 
+                    xmlns:q16="http://schemas.datacontract.org/2004/07/S"/>
+                <xs:element minOccurs="0" name="utilisateur" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="AjoutDocVersionDansCourrierSynchroResponse">
+        <xs:complexType>
+            <xs:sequence/>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="SupprimerDocVersionDansCourrierSynchro">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="docSynchro" nillable="true" type="q17:DocSynchro" 
+                    xmlns:q17="http://schemas.datacontract.org/2004/07/S"/>
+                <xs:element minOccurs="0" name="utilisateur" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="SupprimerDocVersionDansCourrierSynchroResponse">
+        <xs:complexType>
+            <xs:sequence/>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="RecupererListeAjoutSynchro">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="utilisateur" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="RecupererListeAjoutSynchroResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="RecupererListeAjoutSynchroResult" nillable="true" type="q18:ArrayOfDocSynchro" 
+                    xmlns:q18="http://schemas.datacontract.org/2004/07/S"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="RecupererListeSuppressionSynchro">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="utilisateur" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="RecupererListeSuppressionSynchroResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="RecupererListeSuppressionSynchroResult" nillable="true" type="q19:ArrayOfDocSynchro" 
+                    xmlns:q19="http://schemas.datacontract.org/2004/07/S"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="ControlerDeplacerCheminDoc">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" name="idDocInfo" type="xs:int"/>
+                <xs:element minOccurs="0" name="utilisateur" nillable="true" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="ControlerDeplacerCheminDocResponse">
+        <xs:complexType>
+            <xs:sequence/>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>

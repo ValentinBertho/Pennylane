@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema elementFormDefault="qualified" targetNamespace="http://schemas.datacontract.org/2004/07/S" 
+    xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+    xmlns:tns="http://schemas.datacontract.org/2004/07/S">
+    <xs:import schemaLocation="WSDocumentAth3.xsd" namespace="http://schemas.microsoft.com/2003/10/Serialization/Arrays"/>
+    <xs:complexType name="DocInfo">
+        <xs:complexContent mixed="false">
+            <xs:extension base="tns:DocInfoD">
+                <xs:sequence/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:element name="DocInfo" nillable="true" type="tns:DocInfo"/>
+    <xs:complexType name="DocInfoD">
+        <xs:sequence>
+            <xs:element minOccurs="0" name="CreerLe" type="xs:dateTime"/>
+            <xs:element minOccurs="0" name="CreerPar" nillable="true" type="xs:string"/>
+            <xs:element minOccurs="0" name="Description" nillable="true" type="xs:string"/>
+            <xs:element minOccurs="0" name="Etat" nillable="true" type="xs:string"/>
+            <xs:element minOccurs="0" name="IdDerniereVersion" type="xs:int"/>
+            <xs:element minOccurs="0" name="IdDocInfo" type="xs:int"/>
+            <xs:element minOccurs="0" name="Libelle" nillable="true" type="xs:string"/>
+            <xs:element minOccurs="0" name="ListeCleValeur" nillable="true" type="q1:ArrayOfKeyValueOfstringstring" 
+                xmlns:q1="http://schemas.microsoft.com/2003/10/Serialization/Arrays"/>
+            <xs:element minOccurs="0" name="ModifLe" type="xs:dateTime"/>
+            <xs:element minOccurs="0" name="ModifPar" nillable="true" type="xs:string"/>
+            <xs:element minOccurs="0" name="UtilisateurEnCoursModification" nillable="true" type="xs:string"/>
+            <xs:element minOccurs="0" name="Valide" type="xs:boolean"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:element name="DocInfoD" nillable="true" type="tns:DocInfoD"/>
+    <xs:complexType name="DocVersion">
+        <xs:complexContent mixed="false">
+            <xs:extension base="tns:DocVersionD">
+                <xs:sequence/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:element name="DocVersion" nillable="true" type="tns:DocVersion"/>
+    <xs:complexType name="DocVersionD">
+        <xs:sequence>
+            <xs:element minOccurs="0" name="CreerLe" type="xs:dateTime"/>
+            <xs:element minOccurs="0" name="CreerPar" nillable="true" type="xs:string"/>
+            <xs:element minOccurs="0" name="Extension" nillable="true" type="xs:string"/>
+            <xs:element minOccurs="0" name="IdDocInfo" type="xs:int"/>
+            <xs:element minOccurs="0" name="IdDocVersion" type="xs:int"/>
+            <xs:element minOccurs="0" name="NbBloc" type="xs:int"/>
+            <xs:element minOccurs="0" name="NomFichier" nillable="true" type="xs:string"/>
+            <xs:element minOccurs="0" name="NomFichierSysteme" nillable="true" type="xs:string"/>
+            <xs:element minOccurs="0" name="NomFichierTelechargement" nillable="true" type="xs:string"/>
+            <xs:element minOccurs="0" name="Position" type="xs:int"/>
+            <xs:element minOccurs="0" name="TailleFichier" type="xs:int"/>
+            <xs:element minOccurs="0" name="Version" type="xs:int"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:element name="DocVersionD" nillable="true" type="tns:DocVersionD"/>
+    <xs:complexType name="ArrayOfDocInfo">
+        <xs:sequence>
+            <xs:element minOccurs="0" maxOccurs="unbounded" name="DocInfo" nillable="true" type="tns:DocInfo"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:element name="ArrayOfDocInfo" nillable="true" type="tns:ArrayOfDocInfo"/>
+    <xs:complexType name="ArrayOfDocVersion">
+        <xs:sequence>
+            <xs:element minOccurs="0" maxOccurs="unbounded" name="DocVersion" nillable="true" type="tns:DocVersion"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:element name="ArrayOfDocVersion" nillable="true" type="tns:ArrayOfDocVersion"/>
+    <xs:complexType name="Mail">
+        <xs:complexContent mixed="false">
+            <xs:extension base="tns:MailD">
+                <xs:sequence/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:element name="Mail" nillable="true" type="tns:Mail"/>
+    <xs:complexType name="MailD">
+        <xs:sequence>
+            <xs:element minOccurs="0" name="Body" nillable="true" type="xs:string"/>
+            <xs:element minOccurs="0" name="From" nillable="true" type="xs:string"/>
+            <xs:element minOccurs="0" name="Subject" nillable="true" type="xs:string"/>
+            <xs:element minOccurs="0" name="To" nillable="true" type="xs:string"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:element name="MailD" nillable="true" type="tns:MailD"/>
+    <xs:complexType name="EzgedDocInfo">
+        <xs:complexContent mixed="false">
+            <xs:extension base="tns:EzgedDocInfoD">
+                <xs:sequence/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:element name="EzgedDocInfo" nillable="true" type="tns:EzgedDocInfo"/>
+    <xs:complexType name="EzgedDocInfoD">
+        <xs:sequence>
+            <xs:element minOccurs="0" name="ChampPleinTexte" nillable="true" type="xs:string"/>
+            <xs:element minOccurs="0" name="Contexte" nillable="true" type="q2:ArrayOfKeyValueOfstringstring" 
+                xmlns:q2="http://schemas.microsoft.com/2003/10/Serialization/Arrays"/>
+            <xs:element minOccurs="0" name="Extension" nillable="true" type="xs:string"/>
+            <xs:element minOccurs="0" name="ImageVignette" nillable="true" type="xs:string"/>
+            <xs:element minOccurs="0" name="NoDocAth" type="xs:int"/>
+            <xs:element minOccurs="0" name="NoDocEzged" type="xs:int"/>
+            <xs:element minOccurs="0" name="NoFichierEzged" type="xs:int"/>
+            <xs:element minOccurs="0" name="NoVersionAth" type="xs:int"/>
+            <xs:element minOccurs="0" name="NoVersionEzged" type="xs:int"/>
+            <xs:element minOccurs="0" name="NomFichier" nillable="true" type="xs:string"/>
+            <xs:element minOccurs="0" name="Ripe" nillable="true" type="xs:string"/>
+            <xs:element minOccurs="0" name="Taille" type="xs:int"/>
+            <xs:element minOccurs="0" name="Titre" nillable="true" type="xs:string"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:element name="EzgedDocInfoD" nillable="true" type="tns:EzgedDocInfoD"/>
+    <xs:complexType name="DocSynchro">
+        <xs:complexContent mixed="false">
+            <xs:extension base="tns:DocSynchroD">
+                <xs:sequence/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:element name="DocSynchro" nillable="true" type="tns:DocSynchro"/>
+    <xs:complexType name="DocSynchroD">
+        <xs:sequence>
+            <xs:element minOccurs="0" name="Chemin" nillable="true" type="xs:string"/>
+            <xs:element minOccurs="0" name="CodTypeC" nillable="true" type="xs:string"/>
+            <xs:element minOccurs="0" name="IdDocInfo" type="xs:int"/>
+            <xs:element minOccurs="0" name="IdDocVersion" type="xs:int"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:element name="DocSynchroD" nillable="true" type="tns:DocSynchroD"/>
+    <xs:complexType name="ArrayOfDocSynchro">
+        <xs:sequence>
+            <xs:element minOccurs="0" maxOccurs="unbounded" name="DocSynchro" nillable="true" type="tns:DocSynchro"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:element name="ArrayOfDocSynchro" nillable="true" type="tns:ArrayOfDocSynchro"/>
+</xs:schema>

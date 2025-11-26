@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{logs/layout}">
+<head>
+    <title>Recherche - Portail de Logs</title>
+</head>
+<body>
+    <th:block layout:fragment="content">
+        <div class="row mb-4">
+            <div class="col">
+                <h1 class="mb-0"><i class="bi bi-search text-primary"></i> Recherche de Logs</h1>
+                <p class="text-muted">Filtrez et recherchez dans vos logs</p>
+            </div>
+        </div>
+
+        <!-- Formulaire de recherche -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-funnel"></i> Filtres de Recherche
+            </div>
+            <div class="card-body">
+                <form th:action="@{/logs/recherche}" method="get">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label for="niveau" class="form-label">Niveau</label>
+                            <select class="form-select" id="niveau" name="niveau">
+                                <option value="">Tous</option>
+                                <option th:each="n : ${niveaux}" th:value="${n}" th:text="${n}" th:selected="${niveau == n}">NIVEAU</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <label for="application" class="form-label">Application</label>
+                            <select class="form-select" id="application" name="application">
+                                <option value="">Toutes</option>
+                                <option th:each="app : ${applications}" th:value="${app}" th:text="${app}" th:selected="${application == app}">APP</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <label for="environnement" class="form-label">Environnement</label>
+                            <select class="form-select" id="environnement" name="environnement">
+                                <option value="">Tous</option>
+                                <option th:each="env : ${environnements}" th:value="${env}" th:text="${env}" th:selected="${environnement == env}">ENV</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <label for="traitement" class="form-label">Traitement</label>
+                            <input type="text" class="form-control" id="traitement" name="traitement" th:value="${traitement}" placeholder="Nom du traitement">
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <label for="initiateur" class="form-label">Initiateur</label>
+                            <input type="text" class="form-control" id="initiateur" name="initiateur" th:value="${initiateur}" placeholder="Nom de l'initiateur">
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <label for="dateDebut" class="form-label">Date Début</label>
+                            <input type="date" class="form-control" id="dateDebut" name="dateDebut" th:value="${#dates.format(dateDebut, 'yyyy-MM-dd')}">
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <label for="dateFin" class="form-label">Date Fin</label>
+                            <input type="date" class="form-control" id="dateFin" name="dateFin" th:value="${#dates.format(dateFin, 'yyyy-MM-dd')}">
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <label for="size" class="form-label">Résultats par page</label>
+                            <select class="form-select" id="size" name="size">
+                                <option value="25" th:selected="${logs.size == 25}">25</option>
+                                <option value="50" th:selected="${logs.size == 50}">50</option>
+                                <option value="100" th:selected="${logs.size == 100}">100</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-12 mb-3">
+                            <label for="message" class="form-label">Message contient</label>
+                            <input type="text" class="form-control" id="message" name="message" th:value="${message}" placeholder="Rechercher dans les messages">
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-filter">
+                            <i class="bi bi-search"></i> Rechercher
+                        </button>
+                        <a th:href="@{/logs/recherche}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Réinitialiser
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Résultats -->
+        <div class="card" th:if="${logs != null and logs.totalElements > 0}">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>
+                    <i class="bi bi-list-ul"></i> Résultats 
+                    <span class="badge bg-primary" th:text="${logs.totalElements}">0</span>
+                </span>
+                <small class="text-muted">
+                    Page <span th:text="${logs.number + 1}">1</span> sur <span th:text="${logs.totalPages}">1</span>
+                </small>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Niveau</th>
+                                <th>Application</th>
+                                <th>Traitement</th>
+                                <th>Initiateur</th>
+                                <th>Message</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="log : ${logs.content}">
+                                <td style="white-space: nowrap;">
+                                    <small th:text="${#dates.format(log.dateLog, 'dd/MM/yyyy HH:mm:ss')}">Date</small>
+                                </td>
+                                <td>
+                                    <span class="badge badge-level" 
+                                          th:classappend="'bg-' + ${log.niveauCssClass}"
+                                          th:text="${log.niveau}">NIVEAU</span>
+                                </td>
+                                <td>
+                                    <span th:text="${log.application ?: '-'}" class="text-truncate d-inline-block" style="max-width: 120px;">App</span>
+                                </td>
+                                <td>
+                                    <span th:text="${log.traitement ?: '-'}" class="text-truncate d-inline-block" style="max-width: 150px;">Traitement</span>
+                                </td>
+                                <td>
+                                    <span th:text="${log.initiateur ?: '-'}">Initiateur</span>
+                                </td>
+                                <td>
+                                    <div class="log-message" th:text="${log.message}" th:title="${log.message}">Message</div>
+                                </td>
+                                <td class="text-center">
+                                    <a th:href="@{/logs/detail/{id}(id=${log.id})}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i> Détails
+                                    </a>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Message si aucun résultat -->
+        <div class="card" th:if="${logs == null or logs.totalElements == 0}">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-search text-muted" style="font-size: 4rem;"></i>
+                <h4 class="mt-3 text-muted">Aucun résultat trouvé</h4>
+                <p class="text-muted">Essayez de modifier vos critères de recherche</p>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <nav th:if="${logs != null and logs.totalPages > 1}" class="mt-4">
+            <ul class="pagination justify-content-center">
+                <li class="page-item" th:classappend="${logs.first} ? 'disabled'">
+                    <a class="page-link" th:href="@{/logs/recherche(page=${logs.number - 1}, size=${logs.size}, niveau=${niveau}, traitement=${traitement}, initiateur=${initiateur}, application=${application}, environnement=${environnement}, dateDebut=${dateDebut}, dateFin=${dateFin}, message=${message}, sortBy=${sortBy}, sortDirection=${sortDirection})}">
+                        Précédent
+                    </a>
+                </li>
+                
+                <li class="page-item" th:each="i : ${#numbers.sequence(0, logs.totalPages - 1)}" 
+                    th:if="${i >= logs.number - 2 and i <= logs.number + 2}"
+                    th:classappend="${i == logs.number} ? 'active'">
+                    <a class="page-link" th:href="@{/logs/recherche(page=${i}, size=${logs.size}, niveau=${niveau}, traitement=${traitement}, initiateur=${initiateur}, application=${application}, environnement=${environnement}, dateDebut=${dateDebut}, dateFin=${dateFin}, message=${message}, sortBy=${sortBy}, sortDirection=${sortDirection})}" 
+                       th:text="${i + 1}">1</a>
+                </li>
+                
+                <li class="page-item" th:classappend="${logs.last} ? 'disabled'">
+                    <a class="page-link" th:href="@{/logs/recherche(page=${logs.number + 1}, size=${logs.size}, niveau=${niveau}, traitement=${traitement}, initiateur=${initiateur}, application=${application}, environnement=${environnement}, dateDebut=${dateDebut}, dateFin=${dateFin}, message=${message}, sortBy=${sortBy}, sortDirection=${sortDirection})}">
+                        Suivant
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </th:block>
+</body>
+</html>

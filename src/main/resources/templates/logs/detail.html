@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{logs/layout}">
+<head>
+    <title>Détail Log - Portail de Logs</title>
+</head>
+<body>
+<th:block layout:fragment="extra-css">
+    <style>
+        .detail-label {
+            font-weight: 600;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+        .detail-value {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 3px solid #3b82f6;
+            word-break: break-word;
+        }
+        .code-block {
+            background-color: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .badge-http-success {
+            background-color: #10b981;
+        }
+        .badge-http-error {
+            background-color: #ef4444;
+        }
+        .badge-http-redirect {
+            background-color: #3b82f6;
+        }
+    </style>
+</th:block>
+
+<th:block layout:fragment="content">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <a th:href="@{/logs/recherche}" class="btn btn-outline-secondary mb-3">
+                        <i class="bi bi-arrow-left"></i> Retour à la recherche
+                    </a>
+                    <h1 class="mb-0">
+                        <i class="bi bi-file-text text-primary"></i> Détail du Log #<span th:text="${log.id}">ID</span>
+                    </h1>
+                </div>
+                <div>
+                    <a th:href="@{/logs/export/pdf/{id}(id=${log.id})}"
+                       class="btn btn-danger btn-lg"
+                       download>
+                        <i class="bi bi-file-pdf"></i> Exporter en PDF
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Informations générales -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-info-circle"></i> Informations Générales
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="detail-label">Date et Heure</div>
+                        <div class="detail-value">
+                            <i class="bi bi-calendar-event"></i>
+                            <span th:text="${#dates.format(log.dateLog, 'dd/MM/yyyy HH:mm:ss')}">Date</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="detail-label">Niveau</div>
+                        <div class="detail-value">
+                                <span class="badge badge-level"
+                                      th:classappend="'bg-' + ${log.niveauCssClass}"
+                                      style="font-size: 1rem;">
+                                    <i th:class="${log.niveauIcon}"></i>
+                                    <span th:text="${log.niveau}">NIVEAU</span>
+                                </span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" th:if="${log.application}">
+                        <div class="detail-label">Application</div>
+                        <div class="detail-value">
+                            <i class="bi bi-app"></i>
+                            <span th:text="${log.application}">App</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" th:if="${log.environnement}">
+                        <div class="detail-label">Environnement</div>
+                        <div class="detail-value">
+                            <i class="bi bi-server"></i>
+                            <span th:text="${log.environnement}">Env</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" th:if="${log.traitement}">
+                        <div class="detail-label">Traitement</div>
+                        <div class="detail-value" th:text="${log.traitement}">Traitement</div>
+                    </div>
+
+                    <div class="mb-3" th:if="${log.initiateur}">
+                        <div class="detail-label">Initiateur</div>
+                        <div class="detail-value">
+                            <i class="bi bi-person-circle"></i>
+                            <span th:text="${log.initiateur}">Initiateur</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" th:if="${log.ipSource}">
+                        <div class="detail-label">IP Source</div>
+                        <div class="detail-value">
+                            <i class="bi bi-hdd-network"></i>
+                            <span th:text="${log.ipSource}">IP</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" th:if="${log.idSessionSql}">
+                        <div class="detail-label">ID Session SQL</div>
+                        <div class="detail-value" th:text="${log.idSessionSql}">Session</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informations techniques -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-gear"></i> Informations Techniques
+                </div>
+                <div class="card-body">
+                    <div class="mb-3" th:if="${log.classe}">
+                        <div class="detail-label">Classe</div>
+                        <div class="detail-value">
+                            <code th:text="${log.classe}">Class</code>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" th:if="${log.methode}">
+                        <div class="detail-label">Méthode</div>
+                        <div class="detail-value">
+                            <code th:text="${log.methode}">Method</code>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" th:if="${log.urlAppellee}">
+                        <div class="detail-label">URL Appelée</div>
+                        <div class="detail-value">
+                            <i class="bi bi-link-45deg"></i>
+                            <span th:text="${log.urlAppellee}">URL</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" th:if="${log.methodeHttp}">
+                        <div class="detail-label">Méthode HTTP</div>
+                        <div class="detail-value">
+                            <span class="badge bg-primary" th:text="${log.methodeHttp}">GET</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" th:if="${log.codeRetourHttp != null}">
+                        <div class="detail-label">Code Retour HTTP</div>
+                        <div class="detail-value">
+                                <span class="badge"
+                                      th:classappend="${log.codeRetourHttp < 300} ? 'badge-http-success' :
+                                                       ${log.codeRetourHttp < 400} ? 'badge-http-redirect' :
+                                                       'badge-http-error'"
+                                      th:text="${log.codeRetourHttp}">200</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" th:if="${log.dureeMs != null}">
+                        <div class="detail-label">Durée d'Exécution</div>
+                        <div class="detail-value">
+                            <i class="bi bi-stopwatch"></i>
+                            <span th:text="${log.dureeMs}">0</span> ms
+                            <span th:if="${log.dureeMs > 1000}" class="badge bg-warning text-dark ms-2">
+                                    <i class="bi bi-exclamation-triangle"></i> Lent
+                                </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message -->
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-chat-left-text"></i> Message
+                </div>
+                <div class="card-body">
+                    <div class="detail-value" th:text="${log.message}">Message du log</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stack Trace -->
+    <div class="row" th:if="${log.stackTrace}">
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <i class="bi bi-bug"></i> Stack Trace
+                </div>
+                <div class="card-body">
+                    <div class="code-block" th:text="${log.stackTrace}">Stack trace</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trames REST -->
+    <div class="row" th:if="${log.trameRequete or log.trameReponse}">
+        <div class="col-md-6 mb-4" th:if="${log.trameRequete}">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-arrow-up-circle"></i> Trame Requête
+                </div>
+                <div class="card-body">
+                    <div class="code-block" th:text="${log.trameRequete}">Requête</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4" th:if="${log.trameReponse}">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-arrow-down-circle"></i> Trame Réponse
+                </div>
+                <div class="card-body">
+                    <div class="code-block" th:text="${log.trameReponse}">Réponse</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</th:block>
+</body>
+</html>

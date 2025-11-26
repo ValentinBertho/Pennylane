@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<service>
+    <id>ath-pennylane</id>
+    <name>ATHENEO : INTERFACE pennylane</name>
+    <description>ATHENEO : INTERFACE pennylane</description>
+    <executable>C:\Program Files\Java\jdk-21\bin\java</executable>
+    <arguments>-Xmx128m -XX:+UseStringDeduplication -XX:+UseSerialGC -jar interface-pennylane.jar</arguments>
+    <logmode>rotate</logmode>
+</service>

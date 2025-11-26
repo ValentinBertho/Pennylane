@@ -1,0 +1,14 @@
+CREATE FUNCTION dbo.fn_PENNYLANE_COD_COM()
+RETURNS VARCHAR(50)
+AS
+BEGIN
+    DECLARE @COD_COM VARCHAR(50) = null;
+
+    -- Logique de sélection pour COD_COM
+    -- SELECT @COD_COM = COD_USER
+    -- FROM USERS
+    -- where COD_USER = 'SIE_Cpta'
+
+    RETURN @COD_COM;
+END;
+GO

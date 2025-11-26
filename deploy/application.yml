@@ -1,0 +1,70 @@
+spring:
+  datasource:
+    url: jdbc:sqlserver://MISMOI2824P.mismo.local\xxxx;databaseName=xxxx;encrypt=false
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    username: xxxxx
+    password: xxxx
+
+  jpa:
+    show-sql: true
+    hibernate:
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+logging:
+  pattern:
+    # Pattern d'affichage des log
+    console: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n'
+  level:
+    # Niveau d'affichage des logs (ERROR, WARN, INFO, DEBUG et TRACE)
+    root: INFO
+    fr.mismo: TRACE
+    org.springframework: INFO
+
+cron:
+  Logging: "-"
+  Customer: "-"
+  Entries: "*/10 * * * * *"
+  Deadlines: "-"
+  Account: "-"
+  Journals: "-"
+  Analytic: "-"
+  Payment: "-"
+  Product: "-"
+
+server:
+  port: 8093
+  servlet:
+    context-path: /api/v1
+    session:
+      timeout: 60s
+
+api:
+  url_v1: https://app.pennylane.com/api/external/v1/
+  url_v2: https://app.pennylane.com/api/external/v2/
+
+Log:
+  niveau:
+    ERROR: 'Erreur '
+    WARN: 'Avertissement '
+    INFO: 'Information '
+    DEBUG: 'Debug '
+    TRACE: 'Détail '
+  Actif: true
+  Initiateur: 'INTERFACE_PENNYLANE'
+
+wsdocument:
+  defaultUri: http://athsql2.mismo.local:8081/WSDocumentAth/WSDocumentAth.svc
+  proprieteDocument:
+    typeDocument: PENNYLANE
+    auteurDocument: ADMIN
+  login: Admin
+  password: ADMIN
+  timeouts:
+    readTimeout: 60000
+    connectionTimeout: 60000

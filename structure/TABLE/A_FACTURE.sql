@@ -1,0 +1,19 @@
+-- Vérifier si les colonnes existent déjà pour éviter les erreurs
+IF NOT EXISTS (
+    SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_NAME = 'A_FACTURE' AND COLUMN_NAME = 'PENNYLANE_ID'
+)
+BEGIN
+    -- Ajouter la colonne 'PENNYLANE_ID' de type VARCHAR(255)
+    ALTER TABLE A_FACTURE ADD PENNYLANE_ID VARCHAR(255);
+END;
+
+-- Vérifier si les colonnes existent déjà pour éviter les erreurs
+IF NOT EXISTS (
+    SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_NAME = 'A_FACTURE' AND COLUMN_NAME = 'PENNYLANE_ID_V2'
+)
+BEGIN
+    -- Ajouter la colonne 'PENNYLANE_ID' de type VARCHAR(255)
+    ALTER TABLE A_FACTURE ADD PENNYLANE_ID_V2 VARCHAR(255);
+END;

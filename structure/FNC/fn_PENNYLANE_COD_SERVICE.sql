@@ -1,0 +1,14 @@
+CREATE FUNCTION dbo.fn_PENNYLANE_COD_SERVICE()
+RETURNS VARCHAR(50)
+AS
+BEGIN
+    DECLARE @COD_SERVICE VARCHAR(50) = null;
+
+    -- Logique de sélection pour COD_SERVICE
+    -- SELECT @COD_SERVICE = COD_SERVICE
+    -- FROM VotreTable3
+    -- WHERE Condition = 'Condition pour COD_SERVICE';
+
+    RETURN @COD_SERVICE;
+END;
+GO

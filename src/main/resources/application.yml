@@ -1,0 +1,114 @@
+spring:
+  application:
+    name: Pennylane          # correspond à spring.application.name
+  profiles:
+    active: DEV          # correspond à spring.profiles.active
+
+  datasource:
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+
+    #url: jdbc:sqlserver://MISMOI2824P.mismo.local\SQL2019;databaseName=MASTERV17_2;encrypt=false
+    #username: sa
+    #password: Master2019
+
+    url: jdbc:sqlserver://NA-ATH01.mismo.local\ATHENEO;databaseName=ATHENEO_MISMO;encrypt=false
+    username: atheneo_sql
+    password: SQL19_4TH)sP3g{7
+
+
+    #url: jdbc:sqlserver://NA-ATH01.mismo.local\ATHENEO;databaseName=ATHENEO_RECETTE;encrypt=false
+    #username: atheneo_sql
+    #password: SQL19_4TH)sP3g{7
+
+  jpa:
+    show-sql: true
+    hibernate:
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+  data:
+    web:
+      pageable:
+        default-page-size: 50
+        max-page-size: 500
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+    encoding: UTF-8
+    cache: false
+
+  task:
+    scheduling:
+      pool:
+        size: 5 # ou plus selon le nombre et la durée des tâches
+      thread-name-prefix: "pennylane-scheduler-"
+
+
+
+logging:
+  pattern:
+    # Pattern d'affichage des log
+    console: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n'
+  level:
+    # Niveau d'affichage des logs (ERROR, WARN, INFO, DEBUG et TRACE)
+    root: INFO
+    fr.mismo: TRACE
+    org.springframework: INFO
+
+cron:
+  Entries: "*/10 * * * * *"
+  Purchases: "-"
+  PurchasesV2: "-"
+  UpdateSale: "-"
+  UpdatePurchaseReglement: "-"
+  UpdatePurchaseReglementV2: "-"
+  PurgeLog: "-"
+
+server:
+  port: 8088
+  servlet:
+    context-path: /
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: on_param
+    include-exception: false
+
+api:
+  url_v1: https://app.pennylane.com/api/external/v2/
+  url_v2: https://app.pennylane.com/api/external/v2/
+
+Log:
+  niveau:
+    ERROR: 'Erreur '
+    WARN: 'Avertissement '
+    INFO: 'Information '
+    DEBUG: 'Debug '
+    TRACE: 'Détail '
+  Actif: true
+  Initiateur: 'INTERFACE_PENNYLANE'
+
+wsdocument:
+  defaultUri: http://na-sso01-recette.mismo.local/WSDocumentAth/WSDocumentAth.svc #${WSDOC_BASE_URL}
+  proprieteDocument:
+    typeDocument: PENNYLANE
+    auteurDocument: ADMIN
+  login: ADMIN
+  password: ADMIN
+  timeouts:
+    readTimeout: 60000
+    connectionTimeout: 60000
+
+facture:
+  statusAFiltrer: 'to_be_processed'
+  daysBackward: 360
+  categoriesAFiltrer:
+    #- FGX
+    - ACH
+  lastInsertPurchases: 2024-01-01T00:00:00

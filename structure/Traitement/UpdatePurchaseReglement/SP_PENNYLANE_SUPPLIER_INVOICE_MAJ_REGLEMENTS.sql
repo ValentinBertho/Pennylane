@@ -1,0 +1,110 @@
+IF EXISTS (SELECT * FROM sys.objects WHERE object_id = object_id(N'[SP_PENNYLANE_SUPPLIER_INVOICE_MAJ_REGLEMENTS]') AND is_ms_shipped = 0 AND [type] IN ('P'))
+DROP PROCEDURE [SP_PENNYLANE_SUPPLIER_INVOICE_MAJ_REGLEMENTS]
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_NULLS ON
+GO
+
+CREATE PROCEDURE [SP_PENNYLANE_SUPPLIER_INVOICE_MAJ_REGLEMENTS]
+    @PAID BIT,
+    @PAYMENT_STATUS VARCHAR(50),
+    @REMAINING_AMOUNT DECIMAL(18, 2),
+    @FULLY_PAID_AT VARCHAR(50),
+    @CURRENCY_AMOUNT DECIMAL(18, 2),
+    @INVOICE_ID VARCHAR(50),
+    @COD_SITE VARCHAR(50),
+    @RESULT_OUTPUT INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @NO_V_FACTURE INT;
+    DECLARE @FUNCTION_NAME NVARCHAR(100);
+    DECLARE @ERROR_MESSAGE NVARCHAR(4000);
+    DECLARE @ERROR_LINE INT;
+    DECLARE @DATE_RGLT DATETIME;
+    DECLARE @DATE_RGLT_FRANCAISE VARCHAR(10);
+
+    BEGIN TRY
+
+            -- Nettoyage et conversion de la date
+            BEGIN TRY
+                SET @DATE_RGLT = CONVERT(DATETIME, LEFT(REPLACE(@FULLY_PAID_AT, 'Z', ''), 19), 120);
+            END TRY
+            BEGIN CATCH
+                SET @DATE_RGLT = GETDATE();
+            END CATCH
+            SET @DATE_RGLT_FRANCAISE = CONVERT(VARCHAR(10), @DATE_RGLT, 103);
+
+        SET @NO_V_FACTURE = (SELECT TOP 1 NO_V_FACTURE FROM V_FACTURE WHERE PENNYLANE_ID = @INVOICE_ID);
+
+        IF EXISTS (SELECT 1 FROM V_FACTURE WHERE PENNYLANE_ID = @INVOICE_ID)
+        BEGIN
+            UPDATE V_FACTURE
+            SET
+                MODIF_LE = GETDATE(),
+                MODIF_PAR = 'PENNYLANE'
+            WHERE PENNYLANE_ID = @INVOICE_ID;
+
+            SET @FUNCTION_NAME =
+                CASE
+                    WHEN @PAYMENT_STATUS = 'partially_paid' THEN 'SP_PENNYLANE_PROCESS_PARTIALLY_PAID'
+                    WHEN @PAYMENT_STATUS = 'fully_paid' THEN 'SP_PENNYLANE_PROCESS_FULLY_PAID'
+                    WHEN @PAYMENT_STATUS = 'to_be_solded' THEN 'SP_PENNYLANE_PROCESS_SOLDEE'
+                    ELSE NULL
+                END;
+
+            IF @FUNCTION_NAME IS NOT NULL
+            BEGIN
+                EXEC @FUNCTION_NAME
+                    @PAID,
+                    @PAYMENT_STATUS,
+                    @REMAINING_AMOUNT,
+                    @DATE_RGLT_FRANCAISE,
+                    @CURRENCY_AMOUNT,
+                    @INVOICE_ID,
+                    @RESULT_OUTPUT OUTPUT;
+            END
+
+            IF @@ROWCOUNT > 0
+            BEGIN
+                SET @RESULT_OUTPUT = 1;
+
+                EXEC SP_PENNYLANE_SYNCHRO_MARQUAGE
+                    @NO_ENTITE = @NO_V_FACTURE,
+                    @ENTITE = 'V_FACTURE',
+                    @INFO = 'MAJ',
+                    @REF_EXT = @INVOICE_ID;
+            END
+            ELSE
+            BEGIN
+                SET @RESULT_OUTPUT = -1; -- Aucune ligne mise à jour
+            END
+        END
+        ELSE
+        BEGIN
+            SET @RESULT_OUTPUT = -2; -- Facture non trouvée
+        END
+
+    END TRY
+BEGIN CATCH
+    SET @RESULT_OUTPUT = -99;
+
+    DECLARE @PARAMS_LOG NVARCHAR(MAX);
+
+    SET @PARAMS_LOG =
+        'PAID=' + ISNULL(CONVERT(VARCHAR, @PAID), 'NULL') +
+        ', PAYMENT_STATUS=' + ISNULL(@PAYMENT_STATUS, 'NULL') +
+        ', REMAINING_AMOUNT=' + ISNULL(CONVERT(VARCHAR, @REMAINING_AMOUNT), 'NULL') +
+        ', FULLY_PAID_AT=' + ISNULL(@FULLY_PAID_AT, 'NULL') +
+        ', CURRENCY_AMOUNT=' + ISNULL(CONVERT(VARCHAR, @CURRENCY_AMOUNT), 'NULL') +
+        ', INVOICE_ID=' + ISNULL(@INVOICE_ID, 'NULL');
+
+    EXEC SP_INSERT_ERROR_LOG
+        @PROCEDURE_NAME = 'SP_PENNYLANE_SUPPLIER_INVOICE_MAJ_REGLEMENTS',
+        @PARAMETERS = @PARAMS_LOG;
+END CATCH
+END
+GO
