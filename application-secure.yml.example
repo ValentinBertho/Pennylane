@@ -1,0 +1,285 @@
+# ====================================================================
+# Configuration sécurisée - Interface ATHENEO <-> PENNYLANE
+# ====================================================================
+# Ce fichier est un EXEMPLE de configuration sécurisée.
+# NE PAS COMMITTER avec des vraies credentials !
+#
+# Instructions :
+# 1. Copier ce fichier : cp application-secure.yml.example application-local.yml
+# 2. Remplacer les variables d'environnement par les vraies valeurs
+# 3. Ajouter application-local.yml au .gitignore
+# ====================================================================
+
+spring:
+  application:
+    name: interface-pennylane
+
+  # ================================================================
+  # BASE DE DONNÉES - Utiliser des variables d'environnement
+  # ================================================================
+  datasource:
+    url: ${DATABASE_URL:jdbc:sqlserver://localhost:1433;databaseName=ATHENEO_MISMO}
+    username: ${DATABASE_USERNAME}  # OBLIGATOIRE - Pas de valeur par défaut
+    password: ${DATABASE_PASSWORD}  # OBLIGATOIRE - Jamais de valeur par défaut
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+
+    # Pool de connexions
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      minimum-idle: ${DB_POOL_MIN:2}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT:30000}
+      idle-timeout: ${DB_IDLE_TIMEOUT:600000}
+      max-lifetime: ${DB_MAX_LIFETIME:1800000}
+
+  # ================================================================
+  # JPA / HIBERNATE - Ne pas exposer les requêtes SQL en production
+  # ================================================================
+  jpa:
+    show-sql: ${JPA_SHOW_SQL:false}  # false en production !
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:none}  # JAMAIS "create" ou "update" en prod
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.SQLServerDialect
+        format_sql: false  # Désactivé en production
+        use_sql_comments: false
+
+  # ================================================================
+  # SÉCURITÉ - Configuration renforcée
+  # ================================================================
+  security:
+    user:
+      name: ${ADMIN_USERNAME:admin}
+      password: ${ADMIN_PASSWORD}  # OBLIGATOIRE - Utilisez un mot de passe fort
+
+# ================================================================
+# SERVEUR - HTTPS et headers de sécurité
+# ================================================================
+server:
+  port: ${SERVER_PORT:8443}
+  
+  # SSL/TLS Configuration
+  ssl:
+    enabled: ${SSL_ENABLED:true}
+    key-store: ${SSL_KEYSTORE_PATH:/path/to/keystore.p12}
+    key-store-password: ${SSL_KEYSTORE_PASSWORD}
+    key-store-type: PKCS12
+    key-alias: pennylane-app
+
+  # Gestion des erreurs - SÉCURISÉE
+  error:
+    include-message: never          # ✓ Ne jamais exposer les messages
+    include-binding-errors: never   # ✓ Ne jamais exposer les détails de validation
+    include-stacktrace: never       # ✓ JAMAIS de stack trace
+    include-exception: false
+    whitelabel:
+      enabled: false                # Page d'erreur personnalisée
+
+  # Compression (performance)
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/plain
+
+# ================================================================
+# LOGGING - Ne pas logger de données sensibles
+# ================================================================
+logging:
+  level:
+    root: INFO
+    fr.mismo.pennylane: ${LOG_LEVEL:INFO}  # DEBUG seulement en dev
+    org.springframework.web: WARN
+    org.springframework.security: WARN
+    org.hibernate: WARN
+
+  # Pattern sécurisé (pas de PII/credentials)
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+  file:
+    name: ${LOG_FILE_PATH:logs/pennylane.log}
+    max-size: 10MB
+    max-history: 30  # Garder 30 jours de logs
+
+# ================================================================
+# ACTUATOR - Endpoints de monitoring
+# ================================================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics  # Limiter les endpoints exposés
+      base-path: /actuator
+
+  endpoint:
+    health:
+      show-details: when-authorized  # Détails seulement si authentifié
+
+  metrics:
+    export:
+      prometheus:
+        enabled: ${PROMETHEUS_ENABLED:false}
+
+# ================================================================
+# WEB SERVICE DOCUMENTS ATHENEO
+# ================================================================
+wsdocument:
+  url: ${WS_DOCUMENT_URL:http://localhost/wsDocument}
+  login: ${WS_DOCUMENT_LOGIN}     # OBLIGATOIRE
+  password: ${WS_DOCUMENT_PASSWORD}  # OBLIGATOIRE
+  proprieteDocument:
+    codService: ${WS_DOC_SERVICE:PENNYLANE}
+    codTypDoc: ${WS_DOC_TYPE:FACTURE}
+    auteurDocument: ${WS_DOC_AUTHOR:INTERFACE_PENNYLANE}
+
+# ================================================================
+# TÂCHES PLANIFIÉES (CRON)
+# ================================================================
+cron:
+  # Synchronisation des écritures comptables (ATHENEO → Pennylane)
+  Entries: ${CRON_ENTRIES:0 */10 * * * ?}  # Toutes les 10 minutes
+  
+  # Mise à jour des statuts de factures
+  UpdateSale: ${CRON_UPDATE_SALE:-}  # Désactivé par défaut
+  
+  # Import des factures fournisseurs (Pennylane → ATHENEO)
+  Purchases: ${CRON_PURCHASES:0 0 */2 * * ?}  # Toutes les 2 heures
+  
+  # Mise à jour des règlements
+  UpdatePurchaseReglement: ${CRON_UPDATE_REGLEMENT:0 30 */2 * * ?}
+  
+  # Purge des logs anciens
+  PurgeLog: ${CRON_PURGE_LOG:0 0 2 * * ?}  # Tous les jours à 2h du matin
+
+# ================================================================
+# CONFIGURATION PENNYLANE API
+# ================================================================
+pennylane:
+  api:
+    base-url: ${PENNYLANE_API_URL:https://app.pennylane.com/api/external/v2}
+    
+    # Rate limiting (protège contre les dépassements de quota)
+    rate-limit:
+      max-calls-per-minute: ${PENNYLANE_RATE_LIMIT:100}
+      retry-attempts: ${PENNYLANE_RETRY_ATTEMPTS:3}
+    
+    # Timeout des requêtes
+    timeout:
+      connect: ${PENNYLANE_CONNECT_TIMEOUT:10000}  # 10 secondes
+      read: ${PENNYLANE_READ_TIMEOUT:30000}        # 30 secondes
+
+    # Les tokens par site sont stockés dans T_SITE.PENNYLANE_TOKEN
+    # ⚠️ IMPORTANT : Chiffrer ces tokens en base de données !
+
+# ================================================================
+# PROFILS
+# ================================================================
+---
+# Profil DÉVELOPPEMENT
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+logging:
+  level:
+    fr.mismo.pennylane: DEBUG
+    org.springframework.security: DEBUG
+
+server:
+  ssl:
+    enabled: false  # HTTP en dev (pas de SSL)
+  port: 8088
+
+spring:
+  jpa:
+    show-sql: true  # OK en dev
+    properties:
+      hibernate:
+        format_sql: true
+
+---
+# Profil PRODUCTION
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+logging:
+  level:
+    fr.mismo.pennylane: INFO
+    root: WARN
+
+server:
+  ssl:
+    enabled: true  # HTTPS OBLIGATOIRE
+  port: 8443
+
+# Monitoring renforcé
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+
+# Alertes
+alerting:
+  email: ${ALERT_EMAIL:ops@mismo.fr}
+  enabled: ${ALERTING_ENABLED:true}
+
+---
+# Profil TEST
+spring:
+  config:
+    activate:
+      on-profile: test
+
+# Base de données H2 en mémoire pour les tests
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+
+# Désactiver les CRON en test
+cron:
+  Entries: "-"
+  UpdateSale: "-"
+  Purchases: "-"
+  UpdatePurchaseReglement: "-"
+  PurgeLog: "-"
+
+# ================================================================
+# VARIABLES D'ENVIRONNEMENT REQUISES
+# ================================================================
+# Pour exécuter l'application, définir ces variables :
+#
+# DATABASE_PASSWORD=<mot_de_passe_bd>
+# ADMIN_PASSWORD=<mot_de_passe_admin>
+# WS_DOCUMENT_LOGIN=<login_ws>
+# WS_DOCUMENT_PASSWORD=<password_ws>
+# SSL_KEYSTORE_PASSWORD=<password_keystore>  (si SSL activé)
+#
+# Exemple Linux/Mac :
+# export DATABASE_PASSWORD="MonMotDePasse123!"
+# export ADMIN_PASSWORD="AdminSecure456!"
+#
+# Exemple Windows :
+# set DATABASE_PASSWORD=MonMotDePasse123!
+# set ADMIN_PASSWORD=AdminSecure456!
+#
+# Exemple Docker :
+# docker run -e DATABASE_PASSWORD="..." -e ADMIN_PASSWORD="..." ...
+#
+# Exemple Kubernetes :
+# kubectl create secret generic pennylane-secrets \
+#   --from-literal=database-password="..." \
+#   --from-literal=admin-password="..."
+# ================================================================
