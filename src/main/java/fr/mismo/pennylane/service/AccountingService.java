@@ -75,9 +75,31 @@ public class AccountingService {
 
     @Transactional
     public void syncEcriture(final Integer ecritureInt, SiteEntity site, List<Item> comptes) {
+        // Validation des paramètres d'entrée
+        if (ecritureInt == null) {
+            log.error("Le numéro de lot d'écriture est null");
+            throw new IllegalArgumentException("Le numéro de lot d'écriture ne peut pas être null");
+        }
+        if (site == null) {
+            log.error("Le site est null pour le lot d'écriture N°{}", ecritureInt);
+            throw new IllegalArgumentException("Le site ne peut pas être null");
+        }
+        if (comptes == null) {
+            log.error("La liste des comptes est null pour le lot d'écriture N°{}", ecritureInt);
+            throw new IllegalArgumentException("La liste des comptes ne peut pas être null");
+        }
+
         log.info("\n/////// Début synchronisation d'un lot d'écriture N°{} ///////\n", ecritureInt);
 
         final List<Ecriture> ecritures = ecritureRepository.getEcrituresToExport(ecritureInt);
+
+        // Vérification si la liste est vide
+        if (ecritures == null || ecritures.isEmpty()) {
+            log.warn("Aucune écriture à exporter pour le lot N°{}", ecritureInt);
+            logRepository.traiterLot(ecritureInt, "Aucune écriture à traiter", true);
+            return;
+        }
+
         final Map<Integer, List<Ecriture>> groupedEcritures = ecritures.stream()
                 .collect(Collectors.groupingBy(Ecriture::getNoEcriturePiece));
 
@@ -87,7 +109,19 @@ public class AccountingService {
         log.info("Nombre d'écritures à traiter : {}", ecritures.size());
 
         for (List<Ecriture> ecrituresList : groupedEcritures.values()) {
-            Ecriture first = ecrituresList.getFirst();
+            // Vérification de sécurité : la liste ne doit pas être vide
+            if (ecrituresList == null || ecrituresList.isEmpty()) {
+                log.warn("Liste d'écritures vide dans le groupe, ignorée");
+                continue;
+            }
+
+            Ecriture first = ecrituresList.get(0);
+            if (first == null) {
+                log.error("La première écriture du groupe est null, ignorée");
+                lotErr++;
+                continue;
+            }
+
             log.debug("Traitement de l'écriture N°{} pour la facture {}", first.getNoEcriturePiece(), first.getNoVFacture());
 
 
@@ -142,11 +176,11 @@ public class AccountingService {
                         log.info("Facture créée avec succès pour la facture {}", first.getNoVFacture());
                         logRepository.traiterFacture(first.getNoVFacture(), response.getId().toString(), response.getId().toString(), true);
                         logRepository.ajouterLigneForum("V_FACTURE", String.valueOf(first.getNoVFacture()), "Facture transmise avec succès à Pennylane.", 5);
-                    } else if (response != null && response.getResponseStatus() == "ALREADY_EXISTS") {
+                    } else if (response != null && "ALREADY_EXISTS".equals(response.getResponseStatus())) {
                         log.warn("Facture déjà existante pour la facture {}", first.getNoVFacture());
                         logRepository.traiterFacture(first.getNoVFacture(), response.getId().toString(), response.getId().toString(), true);
                         logRepository.ajouterLigneForum("V_FACTURE", String.valueOf(first.getNoVFacture()), "La facture existe déjà dans Pennylane.", 4);
-                    } else if (response != null && response.getResponseStatus() == "FAILED") {
+                    } else if (response != null && "FAILED".equals(response.getResponseStatus())) {
                         log.error("Échec lors de la création de la facture {}: {}", first.getNoVFacture(), response.getResponseMessage());
                         logRepository.ajouterLigneForum("V_FACTURE", String.valueOf(first.getNoVFacture()), "Échec création facture : " + response.getResponseMessage(), 2);
                         lotErr++;
@@ -203,7 +237,21 @@ public class AccountingService {
 
     private String processCustomer(Ecriture first, SiteEntity site, String noFacture, List<Item> comptes) {
         List<FactureDTO> invoiceToImport = factureRepository.getFacture(first.getNoVFacture());
-        Tiers tierToImport = societeRepository.getTiers(invoiceToImport.getFirst().getNoSociete(), site.getCode());
+
+        // Validation : la liste de factures ne doit pas être vide
+        if (invoiceToImport == null || invoiceToImport.isEmpty()) {
+            log.error("Aucune facture trouvée pour la facture N°{}", first.getNoVFacture());
+            throw new IllegalStateException("Impossible de traiter le client : aucune facture trouvée");
+        }
+
+        Tiers tierToImport = societeRepository.getTiers(invoiceToImport.get(0).getNoSociete(), site.getCode());
+
+        // Validation : le tiers doit exister
+        if (tierToImport == null) {
+            log.error("Aucun tiers trouvé pour la société N°{}", invoiceToImport.get(0).getNoSociete());
+            throw new IllegalStateException("Impossible de traiter le client : tiers introuvable");
+        }
+
         Customer customer = null;
         String customerId = null;
 
@@ -367,7 +415,18 @@ public class AccountingService {
 
 
     private Item verifyOrCreateCompte(String compteGeneral, List<Item> comptes, SiteEntity site, String raisonSociale) {
+        // Validation des paramètres
+        if (compteGeneral == null || compteGeneral.trim().isEmpty()) {
+            log.error("Le numéro de compte général est null ou vide");
+            return null;
+        }
+        if (comptes == null) {
+            log.error("La liste des comptes est null");
+            return null;
+        }
+
         Optional<Item> existingItem = comptes.stream()
+                .filter(item -> item != null && item.getNumber() != null)
                 .filter(item -> Objects.equals(
                         removeTrailingZerosString(item.getNumber()),
                         removeTrailingZerosString(String.valueOf(compteGeneral))
@@ -377,13 +436,18 @@ public class AccountingService {
         if (existingItem.isEmpty()) {
             Item newItem = new Item();
             newItem.setNumber(compteGeneral);
-            newItem.setLabel(raisonSociale);
+            newItem.setLabel(raisonSociale != null ? raisonSociale : "Auto interface Pennylane");
             try {
                 Item createdItem = accountsApi.createLedgerAccount(newItem, site);
+                // FIXME: Remplacer ce sleep par un mécanisme de retry/backoff approprié
+                // Le sleep bloque le thread et n'est pas une bonne pratique
                 Thread.sleep(2000);
                 log.info("Compte créé dans Pennylane : {}", createdItem);
                 existingItem = Optional.of(createdItem);
                 comptes.add(createdItem);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.error("Interruption lors de l'attente après création du compte", e);
             } catch (Exception e) {
                 log.error("Erreur lors de la création du compte dans Pennylane", e);
             }
