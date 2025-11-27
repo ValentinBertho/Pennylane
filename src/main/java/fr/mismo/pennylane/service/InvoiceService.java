@@ -526,19 +526,57 @@ public class InvoiceService {
         return value != null ? value.toString() : defaultValue;
     }
 
+    /**
+     * Parse un objet en double de manière sécurisée
+     * @param value Valeur à parser
+     * @param defaultValue Valeur par défaut en cas d'erreur
+     * @return Le double parsé ou la valeur par défaut
+     */
     private static double parseDoubleSafe(Object value, double defaultValue) {
-        if (value == null) return defaultValue;
+        if (value == null) {
+            return defaultValue;
+        }
+
         try {
-            return Double.parseDouble(value.toString());
+            String strValue = value.toString().trim();
+            if (strValue.isEmpty()) {
+                return defaultValue;
+            }
+            return Double.parseDouble(strValue);
         } catch (NumberFormatException e) {
             return defaultValue;
         }
     }
 
+    /**
+     * Calcule le statut de paiement d'une facture selon sa situation
+     * @param isPaid Indicateur de paiement complet
+     * @param remaining Montant restant à payer
+     * @param total Montant total de la facture
+     * @return Le statut de paiement approprié
+     */
     private static String computePaymentStatus(boolean isPaid, double remaining, double total) {
-        if (remaining == 0.0) return "fully_paid";
-        if (remaining < total) return "partially_paid";
-        if (total == remaining && isPaid) return "to_be_solded";
+        // Gestion des edge cases
+        if (total < 0) {
+            return "to_be_processed"; // Montant invalide
+        }
+
+        // Facture totalement payée (remaining = 0 ou proche de 0 pour gérer les arrondis)
+        if (Math.abs(remaining) < 0.01) {
+            return "fully_paid";
+        }
+
+        // Facture partiellement payée (0 < remaining < total)
+        if (remaining > 0 && remaining < total) {
+            return "partially_paid";
+        }
+
+        // Cas spécial : total = remaining et marqué comme payé
+        if (Math.abs(total - remaining) < 0.01 && isPaid) {
+            return "to_be_solded";
+        }
+
+        // Par défaut : à traiter
         return "to_be_processed";
     }
 
