@@ -10,7 +10,9 @@ import fr.mismo.pennylane.dto.Document;
 import fr.mismo.pennylane.dto.accounting.Item;
 import fr.mismo.pennylane.dto.invoice.*;
 import fr.mismo.pennylane.dto.supplier.Supplier;
+import fr.mismo.pennylane.model.PaymentStatus;
 import fr.mismo.pennylane.settings.WsDocumentProperties;
+import fr.mismo.pennylane.util.ApiConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -549,35 +551,61 @@ public class InvoiceService {
     }
 
     /**
-     * Calcule le statut de paiement d'une facture selon sa situation
-     * @param isPaid Indicateur de paiement complet
-     * @param remaining Montant restant à payer
+     * Calcule le statut de paiement d'une facture selon sa situation.
+     * Logique corrigée pour éviter les contradictions et gérer tous les edge cases.
+     *
+     * @param isPaid Indicateur de paiement complet (selon l'API)
+     * @param remainingAmount Montant restant à payer (peut être null)
      * @param total Montant total de la facture
      * @return Le statut de paiement approprié
      */
-    private static String computePaymentStatus(boolean isPaid, double remaining, double total) {
-        // Gestion des edge cases
+    private static String computePaymentStatus(boolean isPaid, Double remainingAmount, double total) {
+        final double EPSILON = ApiConstants.Validation.AMOUNT_PRECISION; // 0.01
+
+        // Validation 1: Montant total invalide
         if (total < 0) {
-            return "to_be_processed"; // Montant invalide
+            log.error("Montant total invalide (négatif): {}", total);
+            return PaymentStatus.INVALID_AMOUNT.getValue();
         }
 
-        // Facture totalement payée (remaining = 0 ou proche de 0 pour gérer les arrondis)
-        if (Math.abs(remaining) < 0.01) {
-            return "fully_paid";
+        // Validation 2: Gérer le cas où remainingAmount est null
+        if (remainingAmount == null) {
+            log.warn("Montant restant null, utilisation du flag isPaid");
+            return isPaid ? PaymentStatus.FULLY_PAID.getValue() : PaymentStatus.TO_BE_PAID.getValue();
         }
 
-        // Facture partiellement payée (0 < remaining < total)
-        if (remaining > 0 && remaining < total) {
-            return "partially_paid";
+        double remaining = remainingAmount;
+
+        // Cas 1: Facture totalement payée (remaining ≈ 0)
+        if (Math.abs(remaining) < EPSILON) {
+            return PaymentStatus.FULLY_PAID.getValue();
         }
 
-        // Cas spécial : total = remaining et marqué comme payé
-        if (Math.abs(total - remaining) < 0.01 && isPaid) {
-            return "to_be_solded";
+        // Cas 2: Surpaiement (remaining < 0) - avoir à créer
+        if (remaining < -EPSILON) {
+            log.warn("Facture surpayée: remaining={}, total={}", remaining, total);
+            return PaymentStatus.OVERPAID.getValue();
+        }
+
+        // Cas 3: Facture partiellement payée (0 < remaining < total)
+        if (remaining > EPSILON && remaining < (total - EPSILON)) {
+            return PaymentStatus.PARTIALLY_PAID.getValue();
+        }
+
+        // Cas 4: Facture non payée (remaining ≈ total)
+        if (Math.abs(total - remaining) < EPSILON) {
+            return PaymentStatus.TO_BE_PAID.getValue();
+        }
+
+        // Cas 5: Remaining > total (erreur de données)
+        if (remaining > total + EPSILON) {
+            log.error("Incohérence: remaining ({}) > total ({})", remaining, total);
+            return PaymentStatus.INVALID_AMOUNT.getValue();
         }
 
         // Par défaut : à traiter
-        return "to_be_processed";
+        log.warn("Statut indéterminé: isPaid={}, remaining={}, total={}", isPaid, remaining, total);
+        return PaymentStatus.TO_BE_PROCESSED.getValue();
     }
 
     @Transactional
