@@ -1,0 +1,21 @@
+﻿# Visual Studio files
+.vscode/
+.vs/
+*.user
+*.suo
+
+# Build outputs
+bin/
+obj/
+*.log
+*.tmp
+
+# Test
+TestResults/
+*.TestResults
+
+# Logs
+logs/
+
+# Secrets
+*.config.user
