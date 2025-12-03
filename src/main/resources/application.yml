@@ -49,6 +49,106 @@ spring:
         size: 5 # ou plus selon le nombre et la durée des tâches
       thread-name-prefix: "pennylane-scheduler-"
 
+# Configuration Actuator pour exposer les métriques Resilience4j
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,circuitbreakers,circuitbreakerevents,retries,retryevents,ratelimiters,bulkheads
+  endpoint:
+    health:
+      show-details: always
+  health:
+    circuitbreakers:
+      enabled: true
+    ratelimiters:
+      enabled: true
+
+# Configuration Resilience4j
+resilience4j:
+  # Circuit Breaker - Protection contre les cascades de pannes
+  circuitbreaker:
+    instances:
+      pennylaneAPI:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 30s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+        recordExceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - org.springframework.web.client.ResourceAccessException
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+
+      databaseOperations:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        waitDurationInOpenState: 20s
+        failureRateThreshold: 60
+        recordExceptions:
+          - java.sql.SQLException
+          - org.springframework.dao.DataAccessException
+
+  # Retry - Réessai automatique des opérations échouées
+  retry:
+    instances:
+      pennylaneAPI:
+        maxAttempts: 3
+        waitDuration: 1s
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+        retryExceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - org.springframework.web.client.ResourceAccessException
+          - java.net.SocketTimeoutException
+        ignoreExceptions:
+          - org.springframework.web.client.HttpClientErrorException.BadRequest
+          - org.springframework.web.client.HttpClientErrorException.Unauthorized
+          - org.springframework.web.client.HttpClientErrorException.NotFound
+
+      databaseOperations:
+        maxAttempts: 2
+        waitDuration: 500ms
+        retryExceptions:
+          - org.springframework.dao.TransientDataAccessException
+
+  # Rate Limiter - Limitation du débit des appels API
+  ratelimiter:
+    instances:
+      pennylaneAPI:
+        registerHealthIndicator: true
+        limitForPeriod: 100
+        limitRefreshPeriod: 60s
+        timeoutDuration: 5s
+        eventConsumerBufferSize: 100
+
+  # Bulkhead - Isolation des ressources et limitation de concurrence
+  bulkhead:
+    instances:
+      schedulerThreadPool:
+        maxConcurrentCalls: 5
+        maxWaitDuration: 10ms
+
+      pennylaneAPI:
+        maxConcurrentCalls: 10
+        maxWaitDuration: 100ms
+
+  # Time Limiter - Timeout des opérations longues
+  timelimiter:
+    instances:
+      pennylaneAPI:
+        timeoutDuration: 30s
+        cancelRunningFuture: true
+
+      databaseOperations:
+        timeoutDuration: 60s
+        cancelRunningFuture: true
+
 
 
 logging:

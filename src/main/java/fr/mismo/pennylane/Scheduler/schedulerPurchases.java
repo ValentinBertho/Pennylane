@@ -27,6 +27,46 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Scheduler pour la synchronisation des factures fournisseurs entre Pennylane et ATHENEO
+ *
+ * <h2>Responsabilités</h2>
+ * <ul>
+ *   <li>Importer les factures fournisseurs Pennylane → ATHENEO (V1 et V2)</li>
+ *   <li>Mettre à jour les règlements/paiements Pennylane → ATHENEO</li>
+ * </ul>
+ *
+ * <h2>Configuration</h2>
+ * <p>Les CRON d'exécution sont définis dans application.yml :</p>
+ * <pre>
+ * cron:
+ *   Purchases: "-"                      # V1 désactivée (récupère toutes les factures)
+ *   PurchasesV2: "-"                    # V2 désactivée (utilise changelog)
+ *   UpdatePurchaseReglement: "-"        # V1 désactivée
+ *   UpdatePurchaseReglementV2: "-"      # V2 désactivée
+ * </pre>
+ *
+ * <h2>Paramètres de configuration</h2>
+ * <pre>
+ * facture:
+ *   statusAFiltrer: 'to_be_processed'   # Statuts à importer
+ *   daysBackward: 360                    # Remonter jusqu'à N jours
+ *   categoriesAFiltrer: [ACH]           # Catégories à synchroniser
+ *   lastInsertPurchases: 2024-01-01T00:00:00
+ * </pre>
+ *
+ * <h2>Procédures stockées utilisées</h2>
+ * <ul>
+ *   <li>{@code SP_PENNYLANE_SUPPLIER_INVOICE_REGLEMENT} - Récupère règlements à maj</li>
+ *   <li>{@code SP_PENNYLANE_GET_FACTURE} - Détails d'une facture</li>
+ * </ul>
+ *
+ * @see InvoiceService
+ * @see CategoryCacheService
+ * @see DOCUMENTATION_SCHEDULERS.md
+ * @author Interface Pennylane
+ * @since 1.10.2
+ */
 @Component
 @Slf4j
 public class schedulerPurchases {
@@ -54,6 +94,57 @@ public class schedulerPurchases {
 
     private static final DateTimeFormatter ISO_DATE_TIME = DateTimeFormatter.ISO_DATE_TIME;
 
+    /**
+     * Synchronise les factures fournisseurs depuis Pennylane vers ATHENEO (Version 1)
+     *
+     * <h3>Direction</h3>
+     * <p>Pennylane → ATHENEO</p>
+     *
+     * <h3>État</h3>
+     * <p>⚠️ DÉSACTIVÉ par défaut (cron: "-")</p>
+     *
+     * <h3>Flux de traitement</h3>
+     * <ol>
+     *   <li>Calcule la date de synchronisation (aujourd'hui - daysBackward)</li>
+     *   <li>Récupère les catégories via cache (optimisation performance)</li>
+     *   <li>Filtre les catégories autorisées (ex: ACH)</li>
+     *   <li>Récupère TOUTES les factures depuis Pennylane via API</li>
+     *   <li>Filtre par statut (ex: to_be_processed)</li>
+     *   <li>Synchronise chaque facture vers ATHENEO</li>
+     *   <li>Met à jour lastInsertPurchases</li>
+     * </ol>
+     *
+     * <h3>Différence avec V2</h3>
+     * <p>V1 récupère TOUTES les factures puis filtre (lourd), V2 utilise changelog (léger).</p>
+     *
+     * <h3>Configuration YAML</h3>
+     * <pre>
+     * cron:
+     *   Purchases: "0 * /30 * * * *"  # Toutes les 30 minutes
+     *
+     * facture:
+     *   statusAFiltrer: 'to_be_processed'
+     *   daysBackward: 360
+     *   categoriesAFiltrer: [ACH]
+     * </pre>
+     *
+     * <h3>API Pennylane utilisée</h3>
+     * <ul>
+     *   <li>GET /categories - Liste des catégories</li>
+     *   <li>GET /supplier_invoices - Liste des factures fournisseurs</li>
+     * </ul>
+     *
+     * <h3>Métriques loggées</h3>
+     * <ul>
+     *   <li>Durée récupération catégories</li>
+     *   <li>Durée récupération factures API</li>
+     *   <li>Durée filtrage</li>
+     *   <li>Nombre factures brutes vs filtrées</li>
+     * </ul>
+     *
+     * @see InvoiceService#syncInvoice(SupplierInvoiceResponse.SupplierInvoiceItem, SiteEntity, List)
+     * @see CategoryCacheService#getCategories(SiteEntity)
+     */
     @Scheduled(cron = "${cron.Purchases}")
     public void SyncPurchases() {
         long startGlobal = System.currentTimeMillis();

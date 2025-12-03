@@ -20,6 +20,38 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * Scheduler pour la synchronisation des données comptables entre ATHENEO et Pennylane
+ *
+ * <h2>Responsabilités</h2>
+ * <ul>
+ *   <li>Synchroniser les écritures comptables ATHENEO → Pennylane</li>
+ *   <li>Mettre à jour les statuts BAP des factures clients</li>
+ *   <li>Purger les anciens logs métier</li>
+ * </ul>
+ *
+ * <h2>Configuration</h2>
+ * <p>Les CRON d'exécution sont définis dans application.yml :</p>
+ * <pre>
+ * cron:
+ *   Entries: "* /10 * * * * *"  # Écritures toutes les 10 secondes
+ *   UpdateSale: "-"              # Désactivé par défaut
+ *   PurgeLog: "-"                # Désactivé par défaut
+ * </pre>
+ *
+ * <h2>Procédures stockées utilisées</h2>
+ * <ul>
+ *   <li>{@code SP_PENNYLANE_EXPORT_LOT} - Récupère les écritures à exporter</li>
+ *   <li>{@code SP_PENNYLANE_CUSTOMER_INVOICE_BAP} - Récupère les factures clients à mettre en BAP</li>
+ *   <li>{@code SP_PENNYLANE_LOG_PURGER} - Purge les anciens logs</li>
+ * </ul>
+ *
+ * @see AccountingService
+ * @see InvoiceService
+ * @see DOCUMENTATION_SCHEDULERS.md
+ * @author Interface Pennylane
+ * @since 1.10.2
+ */
 @Component
 @Slf4j
 public class schedulerAccounting {
@@ -53,6 +85,40 @@ public class schedulerAccounting {
         }
     }
 
+    /**
+     * Synchronise les écritures comptables depuis ATHENEO vers Pennylane
+     *
+     * <h3>Flux de traitement</h3>
+     * <ol>
+     *   <li>Récupère tous les sites actifs (pennylaneActif = true)</li>
+     *   <li>Pour chaque site :
+     *     <ul>
+     *       <li>Récupère les écritures à exporter via SP_PENNYLANE_EXPORT_LOT</li>
+     *       <li>Récupère le plan comptable Pennylane (ledger accounts)</li>
+     *       <li>Valide et synchronise chaque écriture</li>
+     *     </ul>
+     *   </li>
+     * </ol>
+     *
+     * <h3>Configuration YAML</h3>
+     * <pre>
+     * cron:
+     *   Entries: "* /10 * * * * *"  # Actif toutes les 10 secondes
+     * </pre>
+     *
+     * <h3>Procédure stockée</h3>
+     * <p>{@code EXEC SP_PENNYLANE_EXPORT_LOT @SITE_ID = ?}</p>
+     *
+     * <h3>Monitoring</h3>
+     * <p>Logs à surveiller :</p>
+     * <ul>
+     *   <li>🔄 [CRON ENTRIES] Démarrage de la synchronisation</li>
+     *   <li>✅ [CRON ENTRIES] Fin de la synchronisation (X ms)</li>
+     * </ul>
+     *
+     * @see EcritureRepository#getLotEcritureToExport(Long)
+     * @see AccountingService#syncEcriture(Integer, SiteEntity, List)
+     */
     @Scheduled(cron = "${cron.Entries}")
     public void syncEntries() {
         long startGlobal = System.currentTimeMillis();
@@ -98,6 +164,34 @@ public class schedulerAccounting {
     }
 
 
+    /**
+     * Met à jour le statut "Bon À Payer" (BAP) des factures clients dans Pennylane
+     *
+     * <h3>Direction</h3>
+     * <p>ATHENEO → Pennylane</p>
+     *
+     * <h3>État</h3>
+     * <p>⚠️ DÉSACTIVÉ par défaut (cron: "-")</p>
+     *
+     * <h3>Flux de traitement</h3>
+     * <ol>
+     *   <li>Récupère les sites avec pennylaneAchat = true</li>
+     *   <li>Récupère les factures à mettre en BAP via SP_PENNYLANE_CUSTOMER_INVOICE_BAP</li>
+     *   <li>Met à jour chaque facture dans Pennylane</li>
+     * </ol>
+     *
+     * <h3>Activation</h3>
+     * <pre>
+     * cron:
+     *   UpdateSale: "0 * /15 * * * *"  # Toutes les 15 minutes
+     * </pre>
+     *
+     * <h3>Procédure stockée</h3>
+     * <p>{@code EXEC SP_PENNYLANE_CUSTOMER_INVOICE_BAP @SITE_CODE = ?}</p>
+     *
+     * @see EcritureRepository#getAFactureBAP(String)
+     * @see InvoiceService#updateInvoice(String, SiteEntity)
+     */
     @Scheduled(cron = "${cron.UpdateSale}")
     public void UpdateSale() {
         long startGlobal = System.currentTimeMillis();
@@ -141,6 +235,27 @@ public class schedulerAccounting {
         log.info("== Fin de la mise en BAP globale des factures ({} ms) ==", durationGlobal);
     }
 
+    /**
+     * Purge les anciens enregistrements de logs métier de la table T_LOG
+     *
+     * <h3>État</h3>
+     * <p>⚠️ DÉSACTIVÉ par défaut (cron: "-")</p>
+     *
+     * <h3>Rôle</h3>
+     * <p>Nettoie les logs plus anciens qu'un seuil défini pour éviter la croissance
+     * excessive de la base de données.</p>
+     *
+     * <h3>Activation recommandée</h3>
+     * <pre>
+     * cron:
+     *   PurgeLog: "0 0 3 * * *"  # Tous les jours à 3h du matin
+     * </pre>
+     *
+     * <h3>Procédure stockée</h3>
+     * <p>{@code EXEC SP_PENNYLANE_LOG_PURGER}</p>
+     *
+     * @see LogRepository#logPurger()
+     */
     @Scheduled(cron = "${cron.PurgeLog}")
     public void purgeLogs() {
         log.info("== Démarrage de la purge des logs ==");
