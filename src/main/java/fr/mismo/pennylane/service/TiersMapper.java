@@ -97,7 +97,7 @@ public class TiersMapper {
                 billingAddress.setCountryAlpha2(getCountryISOCode(Optional.ofNullable(tiers.getPays()).orElse("").trim()));
                 customer.setBillingAddress(billingAddress);
 
-                // Delivery address (copied from billing for now)
+                // Delivery address
                 Address deliveryAddress = new Address();
                 deliveryAddress.setAddress(billingAddress.getAddress());
                 deliveryAddress.setPostalCode(billingAddress.getPostalCode());

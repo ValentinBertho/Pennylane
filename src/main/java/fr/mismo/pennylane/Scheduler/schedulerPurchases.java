@@ -27,6 +27,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Scheduler pour la synchronisation des factures fournisseurs entre Pennylane et ATHENEO
+ */
 @Component
 @Slf4j
 public class schedulerPurchases {
@@ -54,10 +57,13 @@ public class schedulerPurchases {
 
     private static final DateTimeFormatter ISO_DATE_TIME = DateTimeFormatter.ISO_DATE_TIME;
 
+    /**
+     * Synchronise les factures fournisseurs depuis Pennylane vers ATHENEO (Version 1)
+     */
     @Scheduled(cron = "${cron.Purchases}")
     public void SyncPurchases() {
         long startGlobal = System.currentTimeMillis();
-        log.info("== Démarrage de la synchronisation des FACTURES ACHATS (Pennylane -> Athénéo) ==");
+        log.trace("== Démarrage de la synchronisation des FACTURES ACHATS (Pennylane -> Athénéo) ==");
 
         OffsetDateTime syncDateTime = LocalDate.now()
                 .minusDays(Long.parseLong(config.getDaysBackward()))
@@ -174,14 +180,14 @@ public class schedulerPurchases {
         }
 
         long durationGlobal = System.currentTimeMillis() - startGlobal;
-        log.info("== Fin de la synchronisation globale des factures achats ({} ms) ==", durationGlobal);
+        log.trace("== Fin de la synchronisation globale des factures achats ({} ms) ==", durationGlobal);
     }
 
 
 
     @Scheduled(cron = "${cron.PurchasesV2}")
     public void SyncPurchasesV2() {
-        log.info("== Démarrage de la synchronisation des FACTURES ACHATS V2 (Pennylane -> Athénéo) ==");
+        log.trace("== Démarrage de la synchronisation des FACTURES ACHATS V2 (Pennylane -> Athénéo) ==");
 
         OffsetDateTime syncDateTime = LocalDate.now()
                 .minusDays(Long.parseLong(config.getDaysBackward()))
@@ -257,7 +263,7 @@ public class schedulerPurchases {
     @Scheduled(cron = "${cron.UpdatePurchaseReglement}")
     public void UpdatePurchaseReglement() {
         long startGlobal = System.currentTimeMillis();
-        log.info("== Démarrage de la mise à jour des REGLEMENTS : (Pennylane -> Athénéo) ==");
+        log.trace("== Démarrage de la mise à jour des REGLEMENTS : (Pennylane -> Athénéo) ==");
 
         List<SiteEntity> sites = siteRepository.findAllByPennylaneAchatTrue();
         log.debug("Mise à jour des règlements pour {} sites ...", sites.size());
@@ -299,7 +305,7 @@ public class schedulerPurchases {
         });
 
         long durationGlobal = System.currentTimeMillis() - startGlobal;
-        log.info("== Fin globale de la mise à jour des règlements ({} ms) ==", durationGlobal);
+        log.trace("== Fin globale de la mise à jour des règlements ({} ms) ==", durationGlobal);
     }
 
 

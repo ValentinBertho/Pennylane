@@ -1,6 +1,6 @@
 ; --------------------------------------------------------------
 ;
-;     Projet    : Interface Pennylane - Version 1.8.0
+;     Projet    : Interface Pennylane - Version 2.0.0
 ;     Copyright : (c) 2025 MISMO
 ;
 ;     Fichier   : InterfacePennylane.iss
@@ -12,7 +12,7 @@
 ;----------------------------------------------------------------*)
 
 #define MyAppName         "Interface Pennylane"
-#define MyAppVersion      "1.8.0"
+#define MyAppVersion      "2.0.0"
 #define MyAppPublisher    "MISMO"
 #define MyAppURL          "http://www.mismo.fr/"
 #define Copyright         "Copyright (C) 2025 MISMO"

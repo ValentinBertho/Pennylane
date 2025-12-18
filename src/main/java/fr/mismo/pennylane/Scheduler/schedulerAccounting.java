@@ -20,6 +20,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * Scheduler pour la synchronisation des données comptables entre ATHENEO et Pennylane
+ *
+ */
 @Component
 @Slf4j
 public class schedulerAccounting {
@@ -53,16 +57,20 @@ public class schedulerAccounting {
         }
     }
 
+    /**
+     * Synchronise les écritures comptables depuis ATHENEO vers Pennylane
+
+     */
     @Scheduled(cron = "${cron.Entries}")
     public void syncEntries() {
         long startGlobal = System.currentTimeMillis();
-        log.info("🔄 [CRON ENTRIES] Démarrage de la synchronisation des écritures");
+        log.debug("🔄 [CRON ENTRIES] Démarrage de la synchronisation des écritures");
         log.debug("== Début de la synchronisation globale des écritures ==");
 
         AtomicReference<List<Item>> accountPennylane = new AtomicReference<>(new ArrayList<>());
         List<SiteEntity> sites = siteRepository.findAllByPennylaneActifTrue();
 
-        log.info("📊 Nombre de sites à traiter : {}", sites.size());
+        log.trace("📊 Nombre de sites à traiter : {}", sites.size());
 
         sites.forEach(site -> {
             long startSite = System.currentTimeMillis();
@@ -70,7 +78,7 @@ public class schedulerAccounting {
 
             List<Integer> ecrituresList = ecritureRepository.getLotEcritureToExport(site.getId()).stream().toList();
             if (CollectionUtils.isEmpty(ecrituresList)) {
-                log.info("Aucune écriture à synchroniser pour {}", site.getCode());
+                log.trace("Aucune écriture à synchroniser pour {}", site.getCode());
                 return;
             }
 
@@ -94,14 +102,17 @@ public class schedulerAccounting {
         });
 
         long durationGlobal = System.currentTimeMillis() - startGlobal;
-        log.info("✅ [CRON ENTRIES] Fin de la synchronisation ({} ms)", durationGlobal);
+        log.trace("✅ [CRON ENTRIES] Fin de la synchronisation ({} ms)", durationGlobal);
     }
 
 
+    /**
+     * Met à jour le statut "Bon À Payer" (BAP) des factures clients dans Pennylane
+     */
     @Scheduled(cron = "${cron.UpdateSale}")
     public void UpdateSale() {
         long startGlobal = System.currentTimeMillis();
-        log.info("== Démarrage de la mise en BAP des FACTURES ACHATS (Athénéo -> Pennylane) ==");
+        log.trace("== Démarrage de la mise en BAP des FACTURES ACHATS (Athénéo -> Pennylane) ==");
 
         List<SiteEntity> sites = siteRepository.findAllByPennylaneAchatTrue();
 
@@ -138,14 +149,17 @@ public class schedulerAccounting {
         });
 
         long durationGlobal = System.currentTimeMillis() - startGlobal;
-        log.info("== Fin de la mise en BAP globale des factures ({} ms) ==", durationGlobal);
+        log.trace("== Fin de la mise en BAP globale des factures ({} ms) ==", durationGlobal);
     }
 
+    /**
+     * Purge les anciens enregistrements de logs métier de la table T_LOG
+     */
     @Scheduled(cron = "${cron.PurgeLog}")
     public void purgeLogs() {
-        log.info("== Démarrage de la purge des logs ==");
+        log.trace("== Démarrage de la purge des logs ==");
         logRepository.logPurger();
-        log.info("== Fin de la purge des logs ==");
+        log.trace("== Fin de la purge des logs ==");
     }
 
 }
