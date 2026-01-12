@@ -34,6 +34,9 @@ public class InvoiceService {
     LogRepository logRepository;
 
     @Autowired
+    LogService logService;
+
+    @Autowired
     SupplierApi supplierApi;
 
     @Autowired
@@ -297,11 +300,11 @@ public class InvoiceService {
             logRepository.traiterSupplierInvoiceBap(invoice.getId().toString(), "", updateSuccess);
 
             if (updateSuccess) {
-                logRepository.ajouterLigneForum("A_FACTURE", aFacture, "Statut de paiement mis à jour ou déjà à jour.", 5);
+                logService.ajouterLigneForumSafe("A_FACTURE", aFacture, "Statut de paiement mis à jour ou déjà à jour.", 5);
                 log.info("Statut de paiement traité pour la facture : {}", aFacture);
                 logHelper.info(traitement, "Statut de paiement traité - ID: " + aFacture);
             } else {
-                logRepository.ajouterLigneForum("A_FACTURE", aFacture, "Échec de la mise à jour du statut de paiement.", 2);
+                logService.ajouterLigneForumSafe("A_FACTURE", aFacture, "Échec de la mise à jour du statut de paiement.", 2);
                 log.warn("Échec de la mise à jour du statut de paiement pour la facture : {}", aFacture);
                 logHelper.warn(traitement, "Échec mise à jour statut de paiement - ID: " + aFacture);
             }
@@ -310,7 +313,7 @@ public class InvoiceService {
             logHelper.info(traitement, "Fin mise à jour facture - ID: " + aFacture);
 
         } catch (final Exception e) {
-            logRepository.ajouterLigneForum("A_FACTURE", aFacture, "Échec de la mise à jour du statut de paiement : " + e.getMessage(), 2);
+            logService.ajouterLigneForumSafe("A_FACTURE", aFacture, "Échec de la mise à jour du statut de paiement : " + e.getMessage(), 2);
             log.error("/////// Fin MAJ d'une FACTURE D'ACHAT en erreur ///////", e);
             logHelper.error(traitement, "Erreur mise à jour facture ID: " + aFacture, e);
         } finally {
@@ -389,7 +392,8 @@ public class InvoiceService {
             logHelper.info(traitement, String.format("Données règlements - Payé: %s, Statut: %s, Restant: %s, Payé le: %s, Total: %s",
                     isPaid, status, remainingAmount, fullyPaidAt, total));
 
-            int result = logRepository.majSupplierInvoiceReglement(
+            // Utilisation de LogService avec transaction séparée pour éviter les problèmes de transaction corrompue
+            int result = logService.majSupplierInvoiceReglementSafe(
                     isPaid, status, remainingAmount, fullyPaidAt, total, invoiceId, siteCode);
 
             if (result == 1) {
@@ -400,7 +404,8 @@ public class InvoiceService {
                         "Mise à jour règlements. Payé: %s, Statut: %s, Restant: %s, Payé le: %s, Total: %s",
                         isPaid, status, remainingAmount, fullyPaidAt, total
                 );
-                logRepository.ajouterLigneForum("V_FACTURE", aFacture, details, 2);
+                // Utilisation de LogService pour éviter les deadlocks
+                logService.ajouterLigneForumSafe("V_FACTURE", aFacture, details, 2);
             } else {
                 log.trace("MAJ échouée pour la facture - ID: {}", invoiceId);
                 logHelper.warn(traitement, "MAJ échouée des règlements pour facture ID: " + invoiceId);
@@ -410,9 +415,14 @@ public class InvoiceService {
             logHelper.info(traitement, "Fin mise à jour règlements facture ID: " + invoiceId);
 
         } catch (Exception e) {
-            logRepository.ajouterLigneForum(
-                    "A_FACTURE", aFacture, "Erreur MAJ règlements: " + e.getMessage(), 2
-            );
+            // Utilisation de LogService pour éviter les deadlocks
+            try {
+                logService.ajouterLigneForumSafe(
+                        "A_FACTURE", aFacture, "Erreur MAJ règlements: " + e.getMessage(), 2
+                );
+            } catch (Exception logError) {
+                log.error("Impossible de logger l'erreur de MAJ règlements", logError);
+            }
             log.error("Erreur lors de la MAJ des règlements - ID: {}", aFacture, e);
             logHelper.error(traitement, "Erreur mise à jour règlements facture ID: " + aFacture, e);
         } finally {
@@ -514,9 +524,13 @@ public class InvoiceService {
             logHelper.info(traitement, "Fin mise à jour règlements facture ID: " + invoiceId);
 
         } catch (Exception e) {
-            logRepository.ajouterLigneForum(
-                    "A_FACTURE", aFacture, "Erreur lors de la MAJ des REGLEMENTS pour la facture: " + e.getMessage(), 2
-            );
+            try {
+                logService.ajouterLigneForumSafe(
+                        "A_FACTURE", aFacture, "Erreur lors de la MAJ des REGLEMENTS pour la facture: " + e.getMessage(), 2
+                );
+            } catch (Exception logError) {
+                log.error("Impossible de logger l'erreur de MAJ règlements V2", logError);
+            }
             log.error("Erreur lors de la MAJ des REGLEMENTS pour la facture - ID: {}", aFacture, e);
             logHelper.error(traitement, "Erreur mise à jour règlements facture ID: " + aFacture, e);
         } finally {
