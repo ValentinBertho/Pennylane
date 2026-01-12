@@ -18,4 +18,4 @@ INSERT INTO PENNYLANE_DEFAULT_VALUES VALUES
 ('COD_TYPE', 'FAC'),                -- Valeur par défaut pour COD_TYPE
 ('COD_ETAT', '3'),                  -- Valeur par défaut pour COD_ETAT
 ('COD_STATUT', '1'),                -- Valeur par défaut pour COD_STATUT
-('NO_INTERLO', '-1'),               -- Valeur par défaut pour NO_INTERLO
+('NO_INTERLO', '-1')               -- Valeur par défaut pour NO_INTERLO

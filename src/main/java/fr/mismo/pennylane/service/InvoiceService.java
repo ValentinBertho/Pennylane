@@ -563,10 +563,10 @@ public class InvoiceService {
         final double EPSILON = ApiConstants.Validation.AMOUNT_PRECISION; // 0.01
 
         // Validation 1: Montant total invalide
-        if (total < 0) {
-            log.error("Montant total invalide (négatif): {}", total);
-            return PaymentStatus.INVALID_AMOUNT.getValue();
-        }
+        //if (total < 0) {
+        //    log.error("Montant total invalide (négatif): {}", total);
+        //    return PaymentStatus.INVALID_AMOUNT.getValue();
+        //}
 
         // Validation 2: Gérer le cas où remainingAmount est null
         if (remainingAmount == null) {

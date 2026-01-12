@@ -1,4 +1,3 @@
-/****** Object:  StoredProcedure [dbo].[SP_PENNYLANE_EXPORT_FACTURE_COURRIER]    Script Date: 31/07/2024 17:17:56 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -19,7 +18,7 @@ Historique des mises à jour :
 
 //////////////////////////////////////////////////////////////////////// */
 
-CREATE PROCEDURE [dbo].[SP_PENNYLANE_EXPORT_FACTURE_COURRIER]
+CREATE OR ALTER PROCEDURE [dbo].[SP_PENNYLANE_EXPORT_FACTURE_COURRIER]
     @NO_V_FACTURE INT
 AS
 IF exists (select * from sysobjects

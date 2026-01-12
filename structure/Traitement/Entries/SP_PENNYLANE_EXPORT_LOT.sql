@@ -1,3 +1,9 @@
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
 /* ////////////////////////////////////////////////////////////////////////
 
 Nom de la procedure stockee : SP_PENNYLANE_EXPORT_LOT
@@ -15,7 +21,7 @@ Historique des mises a jour :
 
 //////////////////////////////////////////////////////////////////////// */
 
-CREATE PROCEDURE [dbo].[SP_PENNYLANE_EXPORT_LOT]
+CREATE OR ALTER PROCEDURE [dbo].[SP_PENNYLANE_EXPORT_LOT]
     @NO_T_SITE INT
 AS
 IF exists (select * from sysobjects

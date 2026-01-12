@@ -8,7 +8,7 @@ public class Item {
 
     @JsonProperty("id")
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    private Integer id;
+    private Long id;
 
     @JsonProperty("label")
     @JsonInclude(JsonInclude.Include.NON_NULL)

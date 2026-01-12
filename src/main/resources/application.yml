@@ -164,10 +164,8 @@ logging:
 cron:
   Entries: "*/10 * * * * *"
   Purchases: "-"
-  PurchasesV2: "-"
   UpdateSale: "-"
   UpdatePurchaseReglement: "-"
-  UpdatePurchaseReglementV2: "-"
   PurgeLog: "-"
 
 server:

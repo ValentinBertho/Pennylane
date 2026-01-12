@@ -68,7 +68,7 @@ class SchedulerAccountingTest {
 
         testAccounts = new ArrayList<>();
         Item item = new Item();
-        item.setId("1");
+        item.setId(Long.valueOf("1"));
         item.setNumber("411000");
         testAccounts.add(item);
     }

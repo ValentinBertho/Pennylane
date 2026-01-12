@@ -38,7 +38,7 @@ BEGIN
 
     -- Exemple : purge des logs de plus de 30 jours
     DELETE LOG
-    WHERE DATE_CREATION < DATEADD(day, -30, GETDATE());
+    WHERE DATE_LOG < DATEADD(day, -30, GETDATE());
 
 END
 GO

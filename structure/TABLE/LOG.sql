@@ -1,27 +1,90 @@
--- Création de la table LOG
-CREATE TABLE [dbo].[LOG] (
-    [ID] BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY, -- Correspond à @Id et @GeneratedValue
-    [DATE_LOG] DATETIME NOT NULL,                  -- Correspond à dateLog
-    [NIVEAU] NVARCHAR(50) NULL,                   -- INFO, DEBUG, WARN, ERROR, FATAL
-    [TRAITEMENT] NVARCHAR(100) NULL,
-    [INITIATEUR] NVARCHAR(100) NULL,
-    [ID_SESSION_SQL] SMALLINT NULL,
-    [MESSAGE] NVARCHAR(MAX) NULL,                 -- Correspond à TEXT
-    [CLASSE] NVARCHAR(200) NULL,
-    [METHODE] NVARCHAR(100) NULL,
-    [STACK_TRACE] NVARCHAR(MAX) NULL,            -- Correspond à TEXT
-    [IP_SOURCE] NVARCHAR(45) NULL,
-    [URL_APPELLEE] NVARCHAR(500) NULL,
-    [METHODE_HTTP] NVARCHAR(10) NULL,
-    [CODE_RETOUR_HTTP] INT NULL,
-    [DUREE_MS] BIGINT NULL,
-    [TRAME_REQUETE] NVARCHAR(MAX) NULL,          -- Correspond à TEXT
-    [TRAME_REPONSE] NVARCHAR(MAX) NULL,          -- Correspond à TEXT
-    [ENVIRONNEMENT] NVARCHAR(50) NULL,           -- DEV, INT, PROD
-    [APPLICATION] NVARCHAR(100) NULL
-);
+-- Vérifie si la table LOG existe, sinon la crée
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'LOG' AND schema_id = SCHEMA_ID('dbo'))
+BEGIN
+    CREATE TABLE [dbo].[LOG] (
+        [ID] BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [DATE_LOG] DATETIME NOT NULL,
+        [NIVEAU] NVARCHAR(50) NULL,
+        [TRAITEMENT] NVARCHAR(100) NULL,
+        [INITIATEUR] NVARCHAR(100) NULL,
+        [ID_SESSION_SQL] SMALLINT NULL,
+        [MESSAGE] NVARCHAR(MAX) NULL,
+        [CLASSE] NVARCHAR(200) NULL,
+        [METHODE] NVARCHAR(100) NULL,
+        [STACK_TRACE] NVARCHAR(MAX) NULL,
+        [IP_SOURCE] NVARCHAR(45) NULL,
+        [URL_APPELLEE] NVARCHAR(500) NULL,
+        [METHODE_HTTP] NVARCHAR(10) NULL,
+        [CODE_RETOUR_HTTP] INT NULL,
+        [DUREE_MS] BIGINT NULL,
+        [TRAME_REQUETE] NVARCHAR(MAX) NULL,
+        [TRAME_REPONSE] NVARCHAR(MAX) NULL,
+        [ENVIRONNEMENT] NVARCHAR(50) NULL,
+        [APPLICATION] NVARCHAR(100) NULL
+    );
+END
 
--- Création des index
-CREATE INDEX idx_date_log ON [dbo].[LOG]([DATE_LOG]);
-CREATE INDEX idx_niveau ON [dbo].[LOG]([NIVEAU]);
-CREATE INDEX idx_traitement ON [dbo].[LOG]([TRAITEMENT]);
+-- Ajout des colonnes manquantes
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = 'DATE_LOG' AND Object_ID = Object_ID('dbo.LOG'))
+    ALTER TABLE [dbo].[LOG] ADD [DATE_LOG] DATETIME NOT NULL DEFAULT GETDATE();
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = 'NIVEAU' AND Object_ID = Object_ID('dbo.LOG'))
+    ALTER TABLE [dbo].[LOG] ADD [NIVEAU] NVARCHAR(50) NULL;
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = 'TRAITEMENT' AND Object_ID = Object_ID('dbo.LOG'))
+    ALTER TABLE [dbo].[LOG] ADD [TRAITEMENT] NVARCHAR(100) NULL;
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = 'INITIATEUR' AND Object_ID = Object_ID('dbo.LOG'))
+    ALTER TABLE [dbo].[LOG] ADD [INITIATEUR] NVARCHAR(100) NULL;
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = 'ID_SESSION_SQL' AND Object_ID = Object_ID('dbo.LOG'))
+    ALTER TABLE [dbo].[LOG] ADD [ID_SESSION_SQL] SMALLINT NULL;
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = 'MESSAGE' AND Object_ID = Object_ID('dbo.LOG'))
+    ALTER TABLE [dbo].[LOG] ADD [MESSAGE] NVARCHAR(MAX) NULL;
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = 'CLASSE' AND Object_ID = Object_ID('dbo.LOG'))
+    ALTER TABLE [dbo].[LOG] ADD [CLASSE] NVARCHAR(200) NULL;
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = 'METHODE' AND Object_ID = Object_ID('dbo.LOG'))
+    ALTER TABLE [dbo].[LOG] ADD [METHODE] NVARCHAR(100) NULL;
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = 'STACK_TRACE' AND Object_ID = Object_ID('dbo.LOG'))
+    ALTER TABLE [dbo].[LOG] ADD [STACK_TRACE] NVARCHAR(MAX) NULL;
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = 'IP_SOURCE' AND Object_ID = Object_ID('dbo.LOG'))
+    ALTER TABLE [dbo].[LOG] ADD [IP_SOURCE] NVARCHAR(45) NULL;
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = 'URL_APPELLEE' AND Object_ID = Object_ID('dbo.LOG'))
+    ALTER TABLE [dbo].[LOG] ADD [URL_APPELLEE] NVARCHAR(500) NULL;
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = 'METHODE_HTTP' AND Object_ID = Object_ID('dbo.LOG'))
+    ALTER TABLE [dbo].[LOG] ADD [METHODE_HTTP] NVARCHAR(10) NULL;
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = 'CODE_RETOUR_HTTP' AND Object_ID = Object_ID('dbo.LOG'))
+    ALTER TABLE [dbo].[LOG] ADD [CODE_RETOUR_HTTP] INT NULL;
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = 'DUREE_MS' AND Object_ID = Object_ID('dbo.LOG'))
+    ALTER TABLE [dbo].[LOG] ADD [DUREE_MS] BIGINT NULL;
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = 'TRAME_REQUETE' AND Object_ID = Object_ID('dbo.LOG'))
+    ALTER TABLE [dbo].[LOG] ADD [TRAME_REQUETE] NVARCHAR(MAX) NULL;
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = 'TRAME_REPONSE' AND Object_ID = Object_ID('dbo.LOG'))
+    ALTER TABLE [dbo].[LOG] ADD [TRAME_REPONSE] NVARCHAR(MAX) NULL;
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = 'ENVIRONNEMENT' AND Object_ID = Object_ID('dbo.LOG'))
+    ALTER TABLE [dbo].[LOG] ADD [ENVIRONNEMENT] NVARCHAR(50) NULL;
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = 'APPLICATION' AND Object_ID = Object_ID('dbo.LOG'))
+    ALTER TABLE [dbo].[LOG] ADD [APPLICATION] NVARCHAR(100) NULL;
+
+-- Création des index si ils n'existent pas
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_date_log' AND object_id = OBJECT_ID('dbo.LOG'))
+    CREATE INDEX idx_date_log ON [dbo].[LOG]([DATE_LOG]);
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_niveau' AND object_id = OBJECT_ID('dbo.LOG'))
+    CREATE INDEX idx_niveau ON [dbo].[LOG]([NIVEAU]);
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_traitement' AND object_id = OBJECT_ID('dbo.LOG'))
+    CREATE INDEX idx_traitement ON [dbo].[LOG]([TRAITEMENT]);

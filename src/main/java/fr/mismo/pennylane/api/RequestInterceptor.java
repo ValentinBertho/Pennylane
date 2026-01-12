@@ -2,7 +2,6 @@ package fr.mismo.pennylane.api;
 
 import fr.mismo.pennylane.service.LogHelper;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
@@ -20,11 +19,16 @@ import java.util.stream.Collectors;
 @Slf4j
 public class RequestInterceptor implements ClientHttpRequestInterceptor {
 
-    @Autowired
-    private LogHelper logHelper;  // Injection du helper
+    private final LogHelper logHelper;
+
+    // ✅ Injection par constructeur (plus fiable)
+    public RequestInterceptor(LogHelper logHelper) {
+        this.logHelper = logHelper;
+    }
 
     @Override
-    public ClientHttpResponse intercept(final HttpRequest request, final byte[] body, final ClientHttpRequestExecution execution) throws IOException {
+    public ClientHttpResponse intercept(final HttpRequest request, final byte[] body,
+                                        final ClientHttpRequestExecution execution) throws IOException {
         traceRequest(request, body);
 
         final long startTime = System.currentTimeMillis();
@@ -34,9 +38,17 @@ public class RequestInterceptor implements ClientHttpRequestInterceptor {
             response = execution.execute(request, body);
             traceResponse(response, request, body, startTime);
         } catch (Exception e) {
-            // Log dans la base en cas d'exception sur l'appel HTTP
-            logHelper.error("API_CALL", "Erreur lors de l'appel HTTP vers " + request.getURI(), e);
-            throw e; // relancer pour ne pas casser la chaîne RestTemplate
+            // ✅ Vérification de sécurité au cas où
+            if (logHelper != null) {
+                try {
+                    logHelper.error("API_CALL", "Erreur lors de l'appel HTTP vers " + request.getURI(), e);
+                } catch (Exception logException) {
+                    log.error("Impossible de logger en base : {}", logException.getMessage());
+                }
+            } else {
+                log.error("LogHelper est null - Erreur API : {}", e.getMessage(), e);
+            }
+            throw e;
         }
 
         return response;
@@ -58,7 +70,8 @@ public class RequestInterceptor implements ClientHttpRequestInterceptor {
         }
     }
 
-    private void traceResponse(final ClientHttpResponse response, final HttpRequest request, final byte[] body, long startTime) throws IOException {
+    private void traceResponse(final ClientHttpResponse response, final HttpRequest request,
+                               final byte[] body, long startTime) throws IOException {
         boolean isError = response.getStatusCode().isError();
         long dureeMs = System.currentTimeMillis() - startTime;
         String url = request.getURI().toString();
@@ -88,16 +101,24 @@ public class RequestInterceptor implements ClientHttpRequestInterceptor {
             log.debug("[ERREUR] Headers      : {}", response.getHeaders());
             log.debug("======================= [ERREUR] response end =================================================");
 
-            // Enregistre en base les informations d’erreur REST
-            logHelper.logRestCall(
-                    "API_CALL",
-                    methode,
-                    url,
-                    response.getStatusCode().value(),
-                    dureeMs,
-                    new String(body, StandardCharsets.UTF_8),
-                    responseTxt
-            );
+            // ✅ Protection contre le null
+            if (logHelper != null) {
+                try {
+                    logHelper.logRestCall(
+                            "API_CALL",
+                            methode,
+                            url,
+                            response.getStatusCode().value(),
+                            dureeMs,
+                            new String(body, StandardCharsets.UTF_8),
+                            responseTxt
+                    );
+                } catch (Exception e) {
+                    log.error("Impossible de logger en base : {}", e.getMessage());
+                }
+            } else {
+                log.error("LogHelper est null - impossible de logger l'erreur REST en base de données");
+            }
         }
     }
 }
