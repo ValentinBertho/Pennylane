@@ -70,7 +70,7 @@ public class schedulerPurchases {
                 .atStartOfDay()
                 .atOffset(ZoneOffset.UTC);
 
-        String statusAFiltrer = config.getStatusAFiltrer();
+        List<String> statusAFiltrer = config.getStatusAFiltrer();
 
         List<SiteEntity> sites = siteRepository.findAllByPennylaneAchatTrue();
         boolean hasProcessedInvoices = false;
@@ -126,7 +126,7 @@ public class schedulerPurchases {
             long startFilter = System.currentTimeMillis();
             List<SupplierInvoiceResponse.SupplierInvoiceItem> invoices = items.stream()
                     .filter(invoice -> statusAFiltrer == null || statusAFiltrer.isEmpty()
-                            || statusAFiltrer.equals(invoice.getPaymentStatus()))
+                            || statusAFiltrer.contains(invoice.getPaymentStatus()))
                     .toList();
 
 
@@ -194,7 +194,7 @@ public class schedulerPurchases {
                 .atStartOfDay()
                 .atOffset(ZoneOffset.UTC);
 
-        String statusAFiltrer = config.getStatusAFiltrer();
+        List<String> statusAFiltrer = config.getStatusAFiltrer();
 
         List<SiteEntity> sites = siteRepository.findAllByPennylaneAchatTrue();
         boolean hasProcessedInvoices = false;
@@ -236,9 +236,9 @@ public class schedulerPurchases {
                             continue;
                         }
 
-                        if (StringUtils.hasText(statusAFiltrer)
-                                && !statusAFiltrer.equals(invoice.getPaymentStatus())) {
-                            log.debug("Facture {} ignorée car statut {} != {}", invoice.getId(), invoice.getPaymentStatus(), statusAFiltrer);
+                        if (!CollectionUtils.isEmpty(statusAFiltrer)
+                                && !statusAFiltrer.contains(invoice.getPaymentStatus())) {
+                            log.debug("Facture {} ignorée car statut {} non présent dans {}", invoice.getId(), invoice.getPaymentStatus(), statusAFiltrer);
                             continue;
                         }
 

@@ -194,7 +194,9 @@ wsdocument:
 
 # Configuration du traitement des factures
 facture:
-  statusAFiltrer: 'to_be_processed'
+  statusAFiltrer:
+    - to_be_processed
+    - to_be_paid
   daysBackward: 360
   categoriesAFiltrer:
     - ACH

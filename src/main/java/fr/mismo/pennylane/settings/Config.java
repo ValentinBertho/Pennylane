@@ -15,7 +15,7 @@ import java.util.List;
 @ConfigurationProperties(prefix = "facture")
 public class Config {
 
-    private String statusAFiltrer;
+    private List<String> statusAFiltrer;
 
     private List<String> categoriesAFiltrer;
 
