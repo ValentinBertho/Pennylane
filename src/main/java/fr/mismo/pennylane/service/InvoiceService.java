@@ -596,10 +596,10 @@ public class InvoiceService {
         }
 
         // Cas 2: Surpaiement (remaining < 0) - avoir à créer
-        if (remaining < -EPSILON) {
-            log.warn("Facture surpayée: remaining={}, total={}", remaining, total);
-            return PaymentStatus.OVERPAID.getValue();
-        }
+        //if (remaining < -EPSILON) {
+        //    log.warn("Facture surpayée: remaining={}, total={}", remaining, total);
+        //    return PaymentStatus.OVERPAID.getValue();
+        //}
 
         // Cas 3: Facture partiellement payée (0 < remaining < total)
         if (remaining > EPSILON && remaining < (total - EPSILON)) {

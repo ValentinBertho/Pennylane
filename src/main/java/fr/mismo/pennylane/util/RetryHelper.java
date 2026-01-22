@@ -32,7 +32,7 @@ public class RetryHelper {
         while (attempt < MAX_RETRIES) {
             try {
                 return operation.get();
-            } catch (CannotAcquireLockException | TransientDataAccessException e) {
+            } catch (TransientDataAccessException e) {
                 attempt++;
                 if (attempt >= MAX_RETRIES) {
                     log.error("Échec de l'opération '{}' après {} tentatives", operationName, MAX_RETRIES, e);

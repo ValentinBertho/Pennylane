@@ -84,8 +84,8 @@ public class LogService {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public int majSupplierInvoiceReglementSafe(Boolean paid, String paymentStatus,
-                                                Double remainingAmount, String fullyPaidAt,
-                                                Double currencyAmount, String invoiceId, String codSite) {
+                                               Double remainingAmount, String fullyPaidAt,
+                                               Double currencyAmount, String invoiceId, String codSite) {
         return RetryHelper.executeWithRetry(
                 () -> logRepository.majSupplierInvoiceReglement(
                         paid, paymentStatus, remainingAmount, fullyPaidAt,

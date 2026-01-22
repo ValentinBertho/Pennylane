@@ -128,19 +128,19 @@ public class AccountingService {
             log.debug("Traitement de l'écriture N°{} pour la facture {}", first.getNoEcriturePiece(), first.getNoVFacture());
 
 
-                Invoice wrapper = null;
+            Invoice wrapper = null;
 
-                try {
+            try {
 
-                    List<Product> products = processProducts(ecrituresList, site);
+                List<Product> products = processProducts(ecrituresList, site);
 
-                    log.info("Produits traités avec succès pour la facture {}", first.getNoVFacture());
-                } catch (Exception e) {
-                    log.error("Erreur lors du traitement des produits pour la facture {}: {}", first.getNoVFacture(), e.getMessage(), e);
-                    logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(first.getNoVFacture()), "Erreur dans le processProducts : " + e.getMessage(), 2);
-                    lotErr++;
-                    continue;
-                }
+                log.info("Produits traités avec succès pour la facture {}", first.getNoVFacture());
+            } catch (Exception e) {
+                log.error("Erreur lors du traitement des produits pour la facture {}: {}", first.getNoVFacture(), e.getMessage(), e);
+                logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(first.getNoVFacture()), "Erreur dans le processProducts : " + e.getMessage(), 2);
+                lotErr++;
+                continue;
+            }
 
 
             try {
@@ -153,15 +153,15 @@ public class AccountingService {
                 continue;
             }
 
-                try {
-                    processCourrier(first, wrapper, site);
-                    log.info("Courrier traité avec succès pour la facture {}", first.getNoVFacture());
-                } catch (Exception e) {
-                    log.error("Erreur lors du traitement du courrier pour la facture {}: {}", first.getNoVFacture(), e.getMessage(), e);
-                    logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(first.getNoVFacture()), "Erreur dans le processCourrier : " + e.getMessage(), 2);
-                    lotErr++;
-                    continue;
-                }
+            try {
+                processCourrier(first, wrapper, site);
+                log.info("Courrier traité avec succès pour la facture {}", first.getNoVFacture());
+            } catch (Exception e) {
+                log.error("Erreur lors du traitement du courrier pour la facture {}: {}", first.getNoVFacture(), e.getMessage(), e);
+                logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(first.getNoVFacture()), "Erreur dans le processCourrier : " + e.getMessage(), 2);
+                lotErr++;
+                continue;
+            }
 
             try {
                 String aCustomer = processCustomer(first, site, String.valueOf(first.getNoVFacture()), comptes);
@@ -175,29 +175,29 @@ public class AccountingService {
             }
 
             InvoiceResponse response = invoiceApi.createInvoice(wrapper, site, true);
-                    if (response != null && (response.getResponseStatus() == null || response.getResponseStatus().isEmpty())) {
-                        log.info("Facture créée avec succès pour la facture {}", first.getNoVFacture());
-                        logService.traiterFactureSafe(first.getNoVFacture(), response.getId().toString(), response.getId().toString(), true);
-                        logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(first.getNoVFacture()), "Facture transmise avec succès à Pennylane.", 5);
-                    } else if (response != null && "ALREADY_EXISTS".equals(response.getResponseStatus())) {
-                        log.warn("Facture déjà existante pour la facture {}", first.getNoVFacture());
-                        logService.traiterFactureSafe(first.getNoVFacture(), response.getId().toString(), response.getId().toString(), true);
-                        logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(first.getNoVFacture()), "La facture existe déjà dans Pennylane.", 4);
-                    } else if (response != null && "FAILED".equals(response.getResponseStatus())) {
-                        log.error("Échec lors de la création de la facture {}: {}", first.getNoVFacture(), response.getResponseMessage());
-                        logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(first.getNoVFacture()), "Échec création facture : " + response.getResponseMessage(), 2);
-                        lotErr++;
-                        continue;
-                    } else {
-                        log.error("Erreur inconnue lors de la création de la facture pour la facture {}", first.getNoVFacture());
-                        logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(first.getNoVFacture()), "Erreur inconnue dans createInvoice", 2);
-                        lotErr++;
-                        continue;
-                    }
+            if (response != null && (response.getResponseStatus() == null || response.getResponseStatus().isEmpty())) {
+                log.info("Facture créée avec succès pour la facture {}", first.getNoVFacture());
+                logService.traiterFactureSafe(first.getNoVFacture(), response.getId().toString(), response.getId().toString(), true);
+                logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(first.getNoVFacture()), "Facture transmise avec succès à Pennylane.", 5);
+            } else if (response != null && "ALREADY_EXISTS".equals(response.getResponseStatus())) {
+                log.warn("Facture déjà existante pour la facture {}", first.getNoVFacture());
+                logService.traiterFactureSafe(first.getNoVFacture(), response.getId().toString(), response.getId().toString(), true);
+                logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(first.getNoVFacture()), "La facture existe déjà dans Pennylane.", 4);
+            } else if (response != null && "FAILED".equals(response.getResponseStatus())) {
+                log.error("Échec lors de la création de la facture {}: {}", first.getNoVFacture(), response.getResponseMessage());
+                logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(first.getNoVFacture()), "Échec création facture : " + response.getResponseMessage(), 2);
+                lotErr++;
+                continue;
+            } else {
+                log.error("Erreur inconnue lors de la création de la facture pour la facture {}", first.getNoVFacture());
+                logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(first.getNoVFacture()), "Erreur inconnue dans createInvoice", 2);
+                lotErr++;
+                continue;
+            }
 
 
-                log.info("Traitement complet réussi pour la facture {}.", first.getNoVFacture());
-                lotSuccess++;
+            log.info("Traitement complet réussi pour la facture {}.", first.getNoVFacture());
+            lotSuccess++;
         }
 
         logService.traiterLotSafe(ecritureInt, "Traitement lot terminé : " + lotSuccess + " réussis, " + lotErr + " erreurs", lotErr == 0);
