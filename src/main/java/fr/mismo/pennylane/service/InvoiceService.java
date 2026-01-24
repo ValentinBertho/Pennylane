@@ -10,9 +10,12 @@ import fr.mismo.pennylane.dto.Document;
 import fr.mismo.pennylane.dto.accounting.Item;
 import fr.mismo.pennylane.dto.invoice.*;
 import fr.mismo.pennylane.dto.supplier.Supplier;
+import fr.mismo.pennylane.logging.FlowLogger;
+import fr.mismo.pennylane.logging.FlowType;
 import fr.mismo.pennylane.model.PaymentStatus;
 import fr.mismo.pennylane.settings.WsDocumentProperties;
 import fr.mismo.pennylane.util.ApiConstants;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -51,14 +54,48 @@ public class InvoiceService {
     @Autowired
     LogHelper logHelper;
 
+    @Autowired
+    FlowLogger flowLogger;
+
+    /**
+     * Résultat de la synchronisation d'une facture fournisseur.
+     */
+    @Getter
+    public static class SyncResult {
+        private boolean created = false;
+        private boolean fournisseurCree = false;
+        private boolean documentTelecharge = false;
+
+        public void setCreated(boolean created) { this.created = created; }
+        public void setFournisseurCree(boolean fournisseurCree) { this.fournisseurCree = fournisseurCree; }
+        public void setDocumentTelecharge(boolean documentTelecharge) { this.documentTelecharge = documentTelecharge; }
+    }
+
+    /**
+     * Résultat de la mise à jour des règlements.
+     */
+    @Getter
+    public static class ReglementResult {
+        private String statut = "UNKNOWN";
+        private double montantPaye = 0.0;
+        private double montantTotal = 0.0;
+        private int transactionsTraitees = 0;
+
+        public void setStatut(String statut) { this.statut = statut; }
+        public void setMontantPaye(double montantPaye) { this.montantPaye = montantPaye; }
+        public void setMontantTotal(double montantTotal) { this.montantTotal = montantTotal; }
+        public void setTransactionsTraitees(int transactionsTraitees) { this.transactionsTraitees = transactionsTraitees; }
+    }
+
     @Transactional
-    public void syncInvoice(final SupplierInvoiceResponse.SupplierInvoiceItem invoice, SiteEntity site,List<Long> categoryIds) {
+    public SyncResult syncInvoice(final SupplierInvoiceResponse.SupplierInvoiceItem invoice, SiteEntity site, List<Long> categoryIds) {
+        SyncResult result = new SyncResult();
         String traitement = "SYNC_INVOICE";
 
         if (invoice == null || site == null) {
-            log.error("Impossible de synchroniser la facture: invoice ou site est null");
-            logHelper.error(traitement, "[translate:Impossible de synchroniser la facture: invoice ou site est null]", null);
-            return;
+            log.error("[SYNC-ACHATS] ✗ Impossible de synchroniser la facture: invoice ou site est null");
+            logHelper.error(traitement, "Impossible de synchroniser la facture: invoice ou site est null", null);
+            return result;
         }
 
         long start = logHelper.startTraitement(traitement);
@@ -110,20 +147,20 @@ public class InvoiceService {
 
             if (invoice.getSupplier() == null) {
                 String errMsg = "Le fournisseur est null pour la facture ID: " + invoiceId;
-                log.error(errMsg);
+                log.error("[SYNC-ACHATS] [{}] ✗ {}", invoiceId, errMsg);
                 logHelper.error(traitement, errMsg, new NullPointerException("Supplier est null"));
                 processError(invoice, new NullPointerException("Supplier est null"));
-                return;
+                return result;
             }
 
             Supplier supplier = supplierApi.retrieveSupplier(String.valueOf(invoice.getSupplier().getId()), site);
 
             if (supplier == null) {
                 String errMsg = "Le fournisseur est null pour la facture ID: " + invoiceId;
-                log.error(errMsg);
+                log.error("[SYNC-ACHATS] [{}] ✗ {}", invoiceId, errMsg);
                 logHelper.error(traitement, errMsg, new NullPointerException("Supplier est null"));
                 processError(invoice, new NullPointerException("Supplier est null"));
-                return;
+                return result;
             }
 
             String nomSociete = Optional.ofNullable(supplier.getName()).orElse("");
@@ -140,21 +177,21 @@ public class InvoiceService {
                     log.error(errMsg);
                     logHelper.error(traitement, errMsg, new NullPointerException("SupplierWrapper ou Supplier est null"));
                     processError(invoice, new NullPointerException("SupplierWrapper ou Supplier est null"));
-                    return;
+                    return result;
                 }
             } catch (Exception e) {
-                log.error("Erreur lors de la récupération du fournisseur pour la facture ID: {}", invoiceId, e);
+                log.error("[SYNC-ACHATS] [{}] ✗ Erreur récupération fournisseur: {}", invoiceId, e.getMessage());
                 logHelper.error(traitement, "Erreur récupération fournisseur facture ID: " + invoiceId, e);
                 processError(invoice, e);
-                return;
+                return result;
             }
 
             if (aSupplier.getLedgerAccount() == null) {
                 String errMsg = "LedgerAccount est null pour le fournisseur de la facture ID: " + invoiceId;
-                log.error(errMsg);
+                log.error("[SYNC-ACHATS] [{}] ✗ {}", invoiceId, errMsg);
                 logHelper.error(traitement, errMsg, new NullPointerException("LedgerAccount est null"));
                 processError(invoice, new NullPointerException("LedgerAccount est null"));
-                return;
+                return result;
             }
 
             Item ledger = accountsApi.getLedgerAccountById(aSupplier.getLedgerAccount().getId().toString(),site);
@@ -167,13 +204,14 @@ public class InvoiceService {
             logHelper.info(traitement, String.format("Détails fournisseur - NoPlanItem: %s, ID Pennylane: %s, ID Pennylane V2: %s", noPlanItem, idPennylaneFourn, idPennylaneFournV2));
 
             if (invoiceExists != null && invoiceExists > 0) {
-                log.debug("Mise à jour de la facture existante - ID: {}", invoiceId);
+                log.debug("[SYNC-ACHATS] [{}] Mise à jour de la facture existante", invoiceId);
                 logHelper.info(traitement, "Mise à jour facture existante - ID: " + invoiceId);
 
                 logRepository.majSupplierInvoice(noPlanItem, invoiceId, objet, dateFacture, codSite,
                         totalHT, totalTTC, totalTVA, invoiceNumber, nomSociete);
+                // Facture existante, pas considérée comme créée
             } else {
-                log.info("Création d'une nouvelle facture - ID: {} ...", invoiceId);
+                log.info("[SYNC-ACHATS] [{}] Création d'une nouvelle facture...", invoiceId);
                 logHelper.info(traitement, "Création nouvelle facture - ID: " + invoiceId);
 
                 String categoryIdsString = categoryIds.stream()
@@ -190,7 +228,7 @@ public class InvoiceService {
                                     category.getLabel() != null ? category.getLabel() : "N/A");
                         }
                     } catch (Exception e) {
-                        log.warn("Erreur lors de la récupération des détails de catégorie pour la facture {}: {}", invoiceId, e.getMessage());
+                        log.warn("[SYNC-ACHATS] [{}] ⚠ Erreur récupération catégorie: {}", invoiceId, e.getMessage());
                         logHelper.warn(traitement, "Erreur récupération catégorie facture ID: " + invoiceId);
                         categoryDetails = "Erreur récupération catégorie";
                     }
@@ -202,18 +240,18 @@ public class InvoiceService {
                                 "Montant TTC: %s, Site: %s, CategoryIds filtrés: [%s], Catégorie facture: %s",
                         invoiceId, objet, nomSociete, totalTTC, codSite, categoryIdsString, categoryDetails);
 
-                log.info("Création d'une nouvelle facture - ID: {} ...", invoiceId);
                 logHelper.info(traitement, "Création facture - ID: " + invoiceId + ", " + importMessage);
 
                 int retour = logRepository.creerSupplierInvoice(noPlanItem, idPennylaneFourn, idPennylaneFournV2, invoiceId, invoiceIdV2, objet, dateFacture, codSite,
                         codDirection, codAgence, codEtat, totalHT, totalTTC, totalTVA, invoiceNumber, devise, nomSociete, importMessage);
 
-                log.info("Facture créée avec succès - Retour ID: {}", retour);
+                result.setCreated(true);
+                log.info("[SYNC-ACHATS] [{}] ✓ Facture créée (ID local: {})", invoiceId, retour);
                 logHelper.info(traitement, "Facture créée avec succès - Retour ID: " + retour);
 
                 String fileUrl = Optional.ofNullable(invoice.getPublicFileUrl()).orElse("");
                 if (!fileUrl.isEmpty()) {
-                    log.info("Importation du PDF pour la facture - ID: {}", invoiceId);
+                    log.debug("[SYNC-ACHATS] [{}] Téléchargement du PDF...", invoiceId);
                     logHelper.info(traitement, "Importation PDF facture - ID: " + invoiceId);
 
                     Document doc = documentService.fetchDocument(fileUrl, "Facture");
@@ -223,19 +261,20 @@ public class InvoiceService {
 
                         documentService.creerDocumentFromBase64(doc, wsDocumentProperties.getProprieteDocument().getAuteurDocument());
 
-                        log.info("Importation du PDF terminée - Facture ID: {}", invoiceId);
+                        result.setDocumentTelecharge(true);
+                        flowLogger.logDocument(FlowType.SYNC_ACHATS, invoiceId, "facture_" + invoiceId + ".pdf", true);
                         logHelper.info(traitement, "Importation PDF terminée - Facture ID: " + invoiceId);
                     } else {
-                        log.warn("Document non récupéré pour la facture - ID: {}", invoiceId);
+                        flowLogger.warnDocumentIndisponible(FlowType.SYNC_ACHATS, invoiceId, fileUrl);
                         logHelper.warn(traitement, "Document non récupéré pour facture ID: " + invoiceId);
                     }
                 } else {
-                    log.warn("URL du fichier non définie pour la facture - ID: {}", invoiceId);
+                    log.debug("[SYNC-ACHATS] [{}] Pas de PDF disponible", invoiceId);
                     logHelper.warn(traitement, "URL fichier non définie pour facture ID: " + invoiceId);
                 }
             }
 
-            log.debug("/////// Fin synchronisation d'une FACTURE D'ACHAT - ID: {} ///////", invoiceId);
+            log.debug("[SYNC-ACHATS] [{}] Synchronisation terminée", invoiceId);
             logHelper.info(traitement, "Fin synchronisation facture ID: " + invoiceId);
 
         } catch (final Exception e) {
@@ -246,6 +285,7 @@ public class InvoiceService {
         } finally {
             logHelper.endTraitement(traitement, start);
         }
+        return result;
     }
 
     @Transactional

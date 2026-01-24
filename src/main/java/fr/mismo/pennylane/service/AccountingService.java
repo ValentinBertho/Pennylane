@@ -14,6 +14,9 @@ import fr.mismo.pennylane.dto.invoice.FileAttachmentResponse;
 import fr.mismo.pennylane.dto.invoice.Invoice;
 import fr.mismo.pennylane.dto.invoice.InvoiceResponse;
 import fr.mismo.pennylane.dto.product.Product;
+import fr.mismo.pennylane.logging.FlowLogger;
+import fr.mismo.pennylane.logging.FlowType;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -76,31 +79,57 @@ public class AccountingService {
     @Autowired
     AccountsApi accountsApi;
 
+    @Autowired
+    FlowLogger flowLogger;
+
+    /**
+     * Résultat de la synchronisation d'un lot d'écritures.
+     * Contient les statistiques pour le bilan du flux.
+     */
+    @Getter
+    public static class SyncResult {
+        private int facturesCrees = 0;
+        private int facturesIgnorees = 0;
+        private int clientsCrees = 0;
+        private int produitsCrees = 0;
+        private int documentsUploades = 0;
+        private final List<String> erreurs = new ArrayList<>();
+
+        public void incrementFacturesCrees() { facturesCrees++; }
+        public void incrementFacturesIgnorees() { facturesIgnorees++; }
+        public void incrementClientsCrees() { clientsCrees++; }
+        public void incrementProduitsCrees() { produitsCrees++; }
+        public void incrementDocumentsUploades() { documentsUploades++; }
+        public void addErreur(String erreur) { erreurs.add(erreur); }
+        public boolean hasErrors() { return !erreurs.isEmpty(); }
+    }
+
     @Transactional
-    public void syncEcriture(final Integer ecritureInt, SiteEntity site, List<Item> comptes) {
+    public SyncResult syncEcriture(final Integer ecritureInt, SiteEntity site, List<Item> comptes) {
+        SyncResult result = new SyncResult();
         // Validation des paramètres d'entrée
         if (ecritureInt == null) {
-            log.error("Le numéro de lot d'écriture est null");
+            log.error("[SYNC-ECRITURES] [LOT-null] ✗ Le numéro de lot d'écriture est null");
             throw new IllegalArgumentException("Le numéro de lot d'écriture ne peut pas être null");
         }
         if (site == null) {
-            log.error("Le site est null pour le lot d'écriture N°{}", ecritureInt);
+            log.error("[SYNC-ECRITURES] [LOT-{}] ✗ Le site est null", ecritureInt);
             throw new IllegalArgumentException("Le site ne peut pas être null");
         }
         if (comptes == null) {
-            log.error("La liste des comptes est null pour le lot d'écriture N°{}", ecritureInt);
+            log.error("[SYNC-ECRITURES] [LOT-{}] ✗ La liste des comptes est null", ecritureInt);
             throw new IllegalArgumentException("La liste des comptes ne peut pas être null");
         }
 
-        log.info("\n/////// Début synchronisation d'un lot d'écriture N°{} ///////\n", ecritureInt);
+        log.info("[SYNC-ECRITURES] [LOT-{}] Début synchronisation du lot d'écriture", ecritureInt);
 
         final List<Ecriture> ecritures = ecritureRepository.getEcrituresToExport(ecritureInt);
 
         // Vérification si la liste est vide
         if (ecritures == null || ecritures.isEmpty()) {
-            log.warn("Aucune écriture à exporter pour le lot N°{}", ecritureInt);
+            log.warn("[SYNC-ECRITURES] [LOT-{}] Aucune écriture à exporter", ecritureInt);
             logService.traiterLotSafe(ecritureInt, "Aucune écriture à traiter", true);
-            return;
+            return result;
         }
 
         final Map<Integer, List<Ecriture>> groupedEcritures = ecritures.stream()
@@ -109,100 +138,122 @@ public class AccountingService {
         int lotSuccess = 0;
         int lotErr = 0;
 
-        log.info("Nombre d'écritures à traiter : {}", ecritures.size());
+        log.info("[SYNC-ECRITURES] [LOT-{}] {} écriture(s) à traiter", ecritureInt, ecritures.size());
 
         for (List<Ecriture> ecrituresList : groupedEcritures.values()) {
             // Vérification de sécurité : la liste ne doit pas être vide
             if (ecrituresList == null || ecrituresList.isEmpty()) {
-                log.warn("Liste d'écritures vide dans le groupe, ignorée");
+                log.warn("[SYNC-ECRITURES] [LOT-{}] Liste d'écritures vide dans le groupe, ignorée", ecritureInt);
                 continue;
             }
 
             Ecriture first = ecrituresList.get(0);
             if (first == null) {
-                log.error("La première écriture du groupe est null, ignorée");
+                log.error("[SYNC-ECRITURES] [LOT-{}] ✗ La première écriture du groupe est null", ecritureInt);
+                result.addErreur("LOT-" + ecritureInt + ": Écriture null");
                 lotErr++;
                 continue;
             }
 
-            log.debug("Traitement de l'écriture N°{} pour la facture {}", first.getNoEcriturePiece(), first.getNoVFacture());
-
+            String factureRef = "FAC-" + first.getNoVFacture();
+            flowLogger.startFacture(FlowType.SYNC_ECRITURES, factureRef);
 
             Invoice wrapper = null;
+            boolean clientCree = false;
+            int produitsCreesCount = 0;
+            boolean documentUploade = false;
 
+            // Traitement des produits
             try {
-
                 List<Product> products = processProducts(ecrituresList, site);
-
-                log.info("Produits traités avec succès pour la facture {}", first.getNoVFacture());
+                produitsCreesCount = products.size();
+                flowLogger.logProduits(FlowType.SYNC_ECRITURES, factureRef, products.size(), produitsCreesCount);
             } catch (Exception e) {
-                log.error("Erreur lors du traitement des produits pour la facture {}: {}", first.getNoVFacture(), e.getMessage(), e);
+                log.error("[SYNC-ECRITURES] [{}] ✗ Erreur traitement produits: {}", factureRef, e.getMessage());
                 logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(first.getNoVFacture()), "Erreur dans le processProducts : " + e.getMessage(), 2);
+                result.addErreur(factureRef + ": Erreur produits - " + e.getMessage());
                 lotErr++;
                 continue;
             }
 
-
+            // Traitement de la facture
             try {
                 wrapper = processInvoice(first, ecrituresList, site, comptes);
-                log.info("Facture traitée avec succès pour la facture {}", first.getNoVFacture());
+                flowLogger.logValidation(FlowType.SYNC_ECRITURES, factureRef, "Préparation facture", true);
             } catch (Exception e) {
-                log.error("Erreur lors du traitement de la facture   {}: {}", first.getNoVFacture(), e.getMessage(), e);
+                log.error("[SYNC-ECRITURES] [{}] ✗ Erreur traitement facture: {}", factureRef, e.getMessage());
                 logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(first.getNoVFacture()), "Erreur dans le processInvoice : " + e.getMessage(), 2);
+                result.addErreur(factureRef + ": Erreur facture - " + e.getMessage());
                 lotErr++;
                 continue;
             }
 
+            // Traitement du courrier (document PDF)
             try {
                 processCourrier(first, wrapper, site);
-                log.info("Courrier traité avec succès pour la facture {}", first.getNoVFacture());
+                if (wrapper.getFileId() != null) {
+                    documentUploade = true;
+                    flowLogger.logDocument(FlowType.SYNC_ECRITURES, factureRef, "facture_" + first.getNoVFacture() + ".pdf", true);
+                }
             } catch (Exception e) {
-                log.error("Erreur lors du traitement du courrier pour la facture {}: {}", first.getNoVFacture(), e.getMessage(), e);
-                logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(first.getNoVFacture()), "Erreur dans le processCourrier : " + e.getMessage(), 2);
-                lotErr++;
-                continue;
+                log.warn("[SYNC-ECRITURES] [{}] ⚠ Document PDF non disponible: {}", factureRef, e.getMessage());
+                flowLogger.warnDocumentIndisponible(FlowType.SYNC_ECRITURES, factureRef, "COU-" + first.getNoVFacture());
+                // Continue sans document
             }
 
+            // Traitement du client
             try {
                 String aCustomer = processCustomer(first, site, String.valueOf(first.getNoVFacture()), comptes);
                 wrapper.setCustomerId(aCustomer);
-                log.info("Client traité avec succès pour la facture {}", first.getNoVFacture());
+                // Déterminer si le client a été créé ou existait déjà
+                // (On considère créé si le processCustomer a retourné un ID)
+                if (aCustomer != null) {
+                    flowLogger.logValidation(FlowType.SYNC_ECRITURES, factureRef, "Client", true);
+                }
             } catch (Exception e) {
-                log.error("Erreur lors du traitement du client pour la facture {}: {}", first.getNoVFacture(), e.getMessage(), e);
+                log.error("[SYNC-ECRITURES] [{}] ✗ Erreur traitement client: {}", factureRef, e.getMessage());
                 logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(first.getNoVFacture()), "Erreur dans le processCustomer : " + e.getMessage(), 2);
+                result.addErreur(factureRef + ": Erreur client - " + e.getMessage());
                 lotErr++;
                 continue;
             }
 
+            // Création de la facture dans Pennylane
             InvoiceResponse response = invoiceApi.createInvoice(wrapper, site, true);
             if (response != null && (response.getResponseStatus() == null || response.getResponseStatus().isEmpty())) {
-                log.info("Facture créée avec succès pour la facture {}", first.getNoVFacture());
+                flowLogger.logFactureCreee(FlowType.SYNC_ECRITURES, factureRef, response.getId().toString(), 0);
                 logService.traiterFactureSafe(first.getNoVFacture(), response.getId().toString(), response.getId().toString(), true);
                 logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(first.getNoVFacture()), "Facture transmise avec succès à Pennylane.", 5);
+                result.incrementFacturesCrees();
+                if (documentUploade) result.incrementDocumentsUploades();
+                result.produitsCrees += produitsCreesCount;
             } else if (response != null && "ALREADY_EXISTS".equals(response.getResponseStatus())) {
-                log.warn("Facture déjà existante pour la facture {}", first.getNoVFacture());
+                flowLogger.infoFactureIgnoree(FlowType.SYNC_ECRITURES, factureRef, "Facture déjà existante dans Pennylane");
                 logService.traiterFactureSafe(first.getNoVFacture(), response.getId().toString(), response.getId().toString(), true);
                 logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(first.getNoVFacture()), "La facture existe déjà dans Pennylane.", 4);
+                result.incrementFacturesIgnorees();
             } else if (response != null && "FAILED".equals(response.getResponseStatus())) {
-                log.error("Échec lors de la création de la facture {}: {}", first.getNoVFacture(), response.getResponseMessage());
+                flowLogger.errorApiPennylane(FlowType.SYNC_ECRITURES, factureRef, 422, response.getResponseMessage());
                 logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(first.getNoVFacture()), "Échec création facture : " + response.getResponseMessage(), 2);
+                result.addErreur(factureRef + ": " + response.getResponseMessage());
                 lotErr++;
                 continue;
             } else {
-                log.error("Erreur inconnue lors de la création de la facture pour la facture {}", first.getNoVFacture());
+                log.error("[SYNC-ECRITURES] [{}] ✗ Erreur inconnue lors de la création", factureRef);
                 logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(first.getNoVFacture()), "Erreur inconnue dans createInvoice", 2);
+                result.addErreur(factureRef + ": Erreur inconnue");
                 lotErr++;
                 continue;
             }
 
-
-            log.info("Traitement complet réussi pour la facture {}.", first.getNoVFacture());
+            log.info("[SYNC-ECRITURES] [{}] ✓ Traitement complet réussi", factureRef);
             lotSuccess++;
         }
 
         logService.traiterLotSafe(ecritureInt, "Traitement lot terminé : " + lotSuccess + " réussis, " + lotErr + " erreurs", lotErr == 0);
-        log.info("Traitement finalisé : {} factures réussies, {} erreurs.", lotSuccess, lotErr);
-        log.info("\n/////// Fin synchronisation d'un lot d'écriture N° {} ///////\n", ecritureInt);
+        log.info("[SYNC-ECRITURES] [LOT-{}] Fin - {} factures réussies, {} erreurs", ecritureInt, lotSuccess, lotErr);
+
+        return result;
     }
 
     private Invoice processInvoice(Ecriture first, List<Ecriture> ecrituresList, SiteEntity site, List<Item> comptes) {
