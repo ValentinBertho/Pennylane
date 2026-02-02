@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -41,11 +42,10 @@ public class ProductApi {
 
         product.setId(null);
         try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("accept", "application/json");
-            headers.set("content-type", "application/json");
+            // L'API Pennylane v1 attend un body enveloppé : {"product": {...}}
+            Map<String, Product> wrappedBody = Map.of("product", product);
 
-            HttpEntity<Product> requestEntity = new HttpEntity<>(product, headerBuilder(site.getPennylaneToken()));
+            HttpEntity<Map<String, Product>> requestEntity = new HttpEntity<>(wrappedBody, headerBuilder(site.getPennylaneToken()));
 
             ResponseEntity<Product> response = restTemplate.exchange(
                     url,
@@ -143,11 +143,10 @@ public class ProductApi {
         String url = apiUrl + "products/" + product.getId();
         product.setId(null);
         try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("accept", "application/json");
-            headers.set("content-type", "application/json");
+            // L'API Pennylane v1 attend un body enveloppé : {"product": {...}}
+            Map<String, Product> wrappedBody = Map.of("product", product);
 
-            HttpEntity<Product> requestEntity = new HttpEntity<>(product, headerBuilder(site.getPennylaneToken()));
+            HttpEntity<Map<String, Product>> requestEntity = new HttpEntity<>(wrappedBody, headerBuilder(site.getPennylaneToken()));
 
             ResponseEntity<Product> response = restTemplate.exchange(
                     url,
