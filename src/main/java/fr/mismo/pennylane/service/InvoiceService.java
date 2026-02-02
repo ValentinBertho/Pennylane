@@ -316,6 +316,18 @@ public class InvoiceService {
             log.info("Facture trouvée : {}", aFacture);
             logHelper.info(traitement, "Facture trouvée - ID: " + aFacture);
 
+            // Vérifier le statut de paiement actuel AVANT de le modifier
+            // pour ne pas écraser un lettrage déjà effectué dans Pennylane
+            String currentPaymentStatus = invoice.getPaymentStatus();
+            if ("fully_paid".equalsIgnoreCase(currentPaymentStatus)
+                    || "partially_paid".equalsIgnoreCase(currentPaymentStatus)) {
+                log.info("[SYNC-BAP] [{}] Facture déjà lettrée (statut actuel: {}), mise à jour BAP ignorée pour préserver le lettrage",
+                        aFacture, currentPaymentStatus);
+                logHelper.info(traitement, "Facture déjà lettrée (statut: " + currentPaymentStatus + "), BAP ignoré - ID: " + aFacture);
+                logRepository.traiterSupplierInvoiceBap(invoice.getId().toString(), currentPaymentStatus, true);
+                return;
+            }
+
             boolean updateSuccess = false;
             try {
                 updateSuccess = invoiceApi.updateSupplierInvoicePaymentStatus(aSite, aFacture, "to_be_paid");
