@@ -57,7 +57,7 @@ public class AccountsApi {
                 );
 
                 AccountingResponse apiResponse = response.getBody();
-                if (apiResponse != null) {
+                if (apiResponse != null && apiResponse.getItems() != null) {
                     allLedgerAccounts.addAll(apiResponse.getItems());
                     totalPages = apiResponse.getTotalPages();
                     currentPage++;

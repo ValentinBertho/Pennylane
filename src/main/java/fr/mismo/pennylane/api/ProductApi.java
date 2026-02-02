@@ -76,6 +76,7 @@ public class ProductApi {
             ResponseProduct response = getProductPage(url, site);
 
             if (response == null) break;
+            if (response.getItems() == null) break;
 
             allProducts.addAll(response.getItems());
             hasMore = response.isHasMore();

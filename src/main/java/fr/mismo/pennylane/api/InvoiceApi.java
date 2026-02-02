@@ -166,6 +166,7 @@ public class InvoiceApi {
 
                 TransactionListResponse body = response.getBody();
                 if (body == null) break;
+                if (body.getItems() == null) break;
 
                 allTransactions.addAll(body.getItems());
                 hasMore = body.isHasMore();
@@ -291,6 +292,7 @@ public class InvoiceApi {
 
                 CategoryListResponse body = response.getBody();
                 if (body == null) break;
+                if (body.getItems() == null) break;
 
                 allCategories.addAll(body.getItems());
                 hasMore = body.isHas_more();
@@ -392,6 +394,7 @@ public class InvoiceApi {
 
                 SupplierInvoiceResponse responseBody = response.getBody();
                 if (responseBody == null) break;
+                if (responseBody.getItems() == null) break;
 
                 allInvoices.addAll(responseBody.getItems());
                 hasMore = responseBody.isHasMore();
@@ -457,6 +460,7 @@ public class InvoiceApi {
 
                 ChangelogResponse body = response.getBody();
                 if (body == null) break;
+                if (body.getItems() == null) break;
 
                 allChangelogs.addAll(body.getItems());
                 hasMore = Boolean.TRUE.equals(body.getHasMore());

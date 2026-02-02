@@ -406,12 +406,24 @@ public class AccountingService {
 
             log.info("Traitement du produit {} - {}.", productToImport.getReference(), productToImport.getLabel());
 
+            Product mappedProduct = productMapper.mapToProduct(productToImport, String.valueOf(ecrituresList.get(0).getNoVFacture()));
+
+            // Validation des champs obligatoires avant envoi à l'API Pennylane
+            String validationError = productMapper.validateProduct(mappedProduct);
+            if (validationError != null) {
+                log.error("[SYNC-ECRITURES] ✗ Produit invalide (ref: {}): {}", productToImport.getExternalReference(), validationError);
+                logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(ecrituresList.get(0).getNoVFacture()),
+                        "Produit invalide (ref: " + productToImport.getExternalReference() + "): " + validationError, 2);
+                continue;
+            }
+
             if (retrievedProduct == null) {
                 log.info("Création du produit dans pennylane");
-                Product createdProduct = productApi.createProduct(
-                        productMapper.mapToProduct(productToImport, String.valueOf(ecrituresList.get(0).getNoVFacture())),
-                        site
-                );
+                Product createdProduct = productApi.createProduct(mappedProduct, site);
+                if (createdProduct == null) {
+                    log.error("[SYNC-ECRITURES] ✗ Échec création produit (ref: {})", productToImport.getExternalReference());
+                    continue;
+                }
                 logRepository.majProduit(
                         Integer.parseInt(productToImport.getExternalReference()),
                         createdProduct.getId().toString()
@@ -419,10 +431,7 @@ public class AccountingService {
                 processedProducts.add(createdProduct);
             } else {
                 log.info("Mise à jour du produit dans pennylane");
-                Product updatedProduct = productApi.updateProduct(
-                        productMapper.mapToProduct(productToImport, String.valueOf(ecrituresList.get(0).getNoVFacture())),
-                        site
-                );
+                Product updatedProduct = productApi.updateProduct(mappedProduct, site);
                 processedProducts.add(updatedProduct);
             }
         }
