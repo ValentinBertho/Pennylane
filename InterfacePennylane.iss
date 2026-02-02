@@ -49,7 +49,7 @@ WizardStyle=              modern
 WizardImageFile=          complus_gray.bmp
 WizardSmallImageFile=     complus_gray.bmp
 DisableWelcomePage=       no
-DisableDirPage=           yes
+DisableDirPage=           no
 DisableProgramGroupPage=  yes
 
 ; Options
@@ -651,16 +651,6 @@ begin
 end;
 
 // ==============================================================================
-// Recalcul du mode upgrade quand le répertoire d'installation change
-// ==============================================================================
-procedure CurPageChanged(CurPageID: Integer);
-begin
-  // Après la page de sélection du répertoire, {app} est résolu
-  if CurPageID = wpSelectDir then
-    RefreshUpgradeDetection;
-end;
-
-// ==============================================================================
 // Masquer les pages de configuration en mode MAJ
 // ==============================================================================
 function ShouldSkipPage(PageID: Integer): Boolean;
@@ -681,11 +671,22 @@ begin
 end;
 
 // ==============================================================================
-// Validation lors du passage à la page suivante
+// Validation et détection upgrade au passage à la page suivante
 // ==============================================================================
 function NextButtonClick(CurPageID: Integer): Boolean;
 begin
   Result := True;
+
+  // Quand l'utilisateur quitte la page de choix du répertoire,
+  // recalculer si c'est une MAJ en vérifiant si application.yml existe
+  if CurPageID = wpSelectDir then
+  begin
+    RefreshUpgradeDetection;
+    if IsUpgrade then
+      Log('Répertoire sélectionné contient une installation existante - mode MAJ activé')
+    else
+      Log('Répertoire sélectionné vierge - mode nouvelle installation');
+  end;
 
   if CurPageID = DatabaseConfigPage.ID then
     Result := ValidateDatabaseConfig;
