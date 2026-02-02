@@ -18,7 +18,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClientException;
 
 import java.time.LocalDate;
@@ -28,10 +27,10 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 /**
- * Scheduler pour la synchronisation des factures fournisseurs entre Pennylane et ATHENEO
+ * Scheduler pour la synchronisation des factures fournisseurs entre Pennylane et ATHENEO.
+ * Principe : aucun log si rien à traiter, bilan complet sinon.
  */
 @Component
 @Slf4j
@@ -64,21 +63,17 @@ public class schedulerPurchases {
     private static final DateTimeFormatter ISO_DATE_TIME = DateTimeFormatter.ISO_DATE_TIME;
 
     /**
-     * Synchronise les factures fournisseurs depuis Pennylane vers ATHENEO (Version 1)
+     * Synchronise les factures fournisseurs depuis Pennylane vers ATHENEO (V1).
      */
     @Scheduled(cron = "${cron.Purchases}")
     public void SyncPurchases() {
         List<SiteEntity> sites = siteRepository.findAllByPennylaneAchatTrue();
-        if (CollectionUtils.isEmpty(sites)) {
-            log.trace("[SYNC-ACHATS] Aucun site actif pour la synchronisation des achats");
-            return;
-        }
+        if (CollectionUtils.isEmpty(sites)) return;
 
         int daysBackward = Integer.parseInt(config.getDaysBackward());
         List<String> statusAFiltrer = config.getStatusAFiltrer();
         List<String> categoriesAFiltrer = config.getCategoriesAFiltrer();
 
-        // Démarrage du flux avec logging amélioré
         String correlationId = flowLogger.startSyncAchats(daysBackward, statusAFiltrer, categoriesAFiltrer);
 
         OffsetDateTime syncDateTime = LocalDate.now()
@@ -86,7 +81,6 @@ public class schedulerPurchases {
                 .atStartOfDay()
                 .atOffset(ZoneOffset.UTC);
 
-        // Compteurs pour le bilan
         AtomicInteger totalFacturesRecuperees = new AtomicInteger(0);
         AtomicInteger totalFacturesRetenues = new AtomicInteger(0);
         AtomicInteger facturesImportees = new AtomicInteger(0);
@@ -97,14 +91,8 @@ public class schedulerPurchases {
         boolean hasProcessedInvoices = false;
 
         for (SiteEntity site : sites) {
-            long startSite = System.currentTimeMillis();
-            log.info("[SYNC-ACHATS] Traitement du site {} ...", site.getCode());
-
             // Récupération catégories
-            long startCategories = System.currentTimeMillis();
             List<Category> categories = categoryCacheService.getCategories(site);
-            long durationCategories = System.currentTimeMillis() - startCategories;
-            log.debug("[SYNC-ACHATS] Site {} - Récupération des catégories en {} ms", site.getCode(), durationCategories);
 
             List<Long> categoryIds = categories.stream()
                     .filter(c -> categoriesAFiltrer.contains(c.getLabel()))
@@ -112,13 +100,9 @@ public class schedulerPurchases {
                     .filter(Objects::nonNull)
                     .toList();
 
-            // Vérification : correspondance entre les deux listes
             if (categoriesAFiltrer.size() != categoryIds.size()) {
-                log.warn("[SYNC-ACHATS] ⚠ Les catégories configurées et les catégories trouvées ne correspondent pas");
-                log.warn("[SYNC-ACHATS]   categoriesAFiltrer={} ({}), categoryIds={} ({})",
-                        categoriesAFiltrer, categoriesAFiltrer.size(),
-                        categoryIds, categoryIds.size());
-                log.warn("[SYNC-ACHATS] Tâche arrêtée pour éviter une incohérence");
+                log.warn("[SYNC-ACHATS] Incohérence catégories pour le site {} (configurées: {}, trouvées: {}), tâche arrêtée",
+                        site.getCode(), categoriesAFiltrer.size(), categoryIds.size());
 
                 flowLogger.endFlow(correlationId, Map.of(
                     "Statut", "INTERROMPU",
@@ -128,13 +112,8 @@ public class schedulerPurchases {
             }
 
             // Récupération factures
-            long startInvoicesApi = System.currentTimeMillis();
             List<SupplierInvoiceResponse.SupplierInvoiceItem> items = invoiceApi.listAllSupplierInvoices(site, categoryIds, syncDateTime);
-            long durationInvoicesApi = System.currentTimeMillis() - startInvoicesApi;
-
             totalFacturesRecuperees.addAndGet(items.size());
-            log.info("[SYNC-ACHATS] Site {} - {} factures récupérées en {} ms",
-                    site.getCode(), items.size(), durationInvoicesApi);
 
             // Filtrage factures
             List<SupplierInvoiceResponse.SupplierInvoiceItem> invoices = items.stream()
@@ -143,15 +122,13 @@ public class schedulerPurchases {
                     .toList();
 
             totalFacturesRetenues.addAndGet(invoices.size());
-            log.info("[SYNC-ACHATS] Site {} - {} factures retenues après filtrage", site.getCode(), invoices.size());
 
-            if (CollectionUtils.isEmpty(invoices)) {
-                log.debug("[SYNC-ACHATS] Aucune facture à synchroniser pour le site {}", site.getCode());
-                continue;
-            }
+            if (CollectionUtils.isEmpty(invoices)) continue;
+
+            log.debug("[SYNC-ACHATS] Site {} : {} factures retenues sur {} récupérées",
+                    site.getCode(), invoices.size(), items.size());
 
             for (SupplierInvoiceResponse.SupplierInvoiceItem invoice : invoices) {
-                long startInvoice = System.currentTimeMillis();
                 try {
                     InvoiceService.SyncResult result = invoiceService.syncInvoice(invoice, site, categoryIds);
                     hasProcessedInvoices = true;
@@ -160,7 +137,6 @@ public class schedulerPurchases {
                         facturesImportees.incrementAndGet();
                         if (result.isFournisseurCree()) fournisseursCrees.incrementAndGet();
                         if (result.isDocumentTelecharge()) documentsTelechargees.incrementAndGet();
-                        log.info("[SYNC-ACHATS] [{}] ✓ Facture importée", invoice.getId());
                     } else {
                         facturesIgnorees.incrementAndGet();
                         flowLogger.infoFactureIgnoree(FlowType.SYNC_ACHATS, String.valueOf(invoice.getId()), "Facture déjà existante");
@@ -169,47 +145,33 @@ public class schedulerPurchases {
                 } catch (final RestClientException e) {
                     flowLogger.errorApiPennylane(FlowType.SYNC_ACHATS, String.valueOf(invoice.getId()), 0, e.getMessage());
                 } catch (final ServiceException e) {
-                    log.error("[SYNC-ACHATS] [{}] ✗ Erreur service: {}", invoice.getId(), e.getMessage());
+                    log.error("[SYNC-ACHATS] [{}] Erreur service: {}", invoice.getId(), e.getMessage());
                 } catch (final Exception e) {
-                    log.error("[SYNC-ACHATS] [{}] ✗ Erreur inattendue: {}", invoice.getId(), e.getMessage(), e);
-                } finally {
-                    long durationInvoice = System.currentTimeMillis() - startInvoice;
-                    log.debug("[SYNC-ACHATS] [{}] Traitement terminé en {} ms", invoice.getId(), durationInvoice);
+                    log.error("[SYNC-ACHATS] [{}] Erreur: {}", invoice.getId(), e.getMessage(), e);
                 }
             }
-
-            long durationSite = System.currentTimeMillis() - startSite;
-            log.info("[SYNC-ACHATS] Fin du traitement du site {} ({} ms)", site.getCode(), durationSite);
         }
 
         if (hasProcessedInvoices) {
             LocalDateTime now = LocalDateTime.now();
             config.setLastInsertPurchases(now);
-            log.debug("[SYNC-ACHATS] Date de dernière synchronisation mise à jour: {}", now);
         }
 
-        // Fin du flux avec bilan
         flowLogger.endSyncAchats(correlationId,
             totalFacturesRecuperees.get(), totalFacturesRetenues.get(),
             facturesImportees.get(), facturesIgnorees.get(),
             fournisseursCrees.get(), documentsTelechargees.get());
     }
 
-
-
     @Scheduled(cron = "${cron.PurchasesV2}")
     public void SyncPurchasesV2() {
         List<SiteEntity> sites = siteRepository.findAllByPennylaneAchatTrue();
-        if (CollectionUtils.isEmpty(sites)) {
-            log.trace("[SYNC-ACHATS-V2] Aucun site actif pour la synchronisation des achats");
-            return;
-        }
+        if (CollectionUtils.isEmpty(sites)) return;
 
         int daysBackward = Integer.parseInt(config.getDaysBackward());
         List<String> statusAFiltrer = config.getStatusAFiltrer();
         List<String> categoriesAFiltrer = config.getCategoriesAFiltrer();
 
-        // Démarrage du flux avec logging amélioré
         String correlationId = flowLogger.startFlow(FlowType.SYNC_ACHATS_V2,
             Map.of("Période", daysBackward + " jours",
                    "Statuts", statusAFiltrer.toString(),
@@ -220,7 +182,6 @@ public class schedulerPurchases {
                 .atStartOfDay()
                 .atOffset(ZoneOffset.UTC);
 
-        // Compteurs pour le bilan
         AtomicInteger changelogsTraites = new AtomicInteger(0);
         AtomicInteger facturesImportees = new AtomicInteger(0);
         AtomicInteger facturesIgnorees = new AtomicInteger(0);
@@ -228,8 +189,6 @@ public class schedulerPurchases {
 
         for (SiteEntity site : sites) {
             try {
-                log.info("[SYNC-ACHATS-V2] Traitement du site {} ...", site.getCode());
-
                 List<Category> categories = invoiceApi.listAllCategories(site);
 
                 List<Long> categoryIds = categories.stream()
@@ -240,12 +199,9 @@ public class schedulerPurchases {
 
                 List<ChangelogResponse.ChangelogItem> changelogs = invoiceApi.listAllSupplierInvoiceChangelogs(site, syncDateTime);
 
-                if (CollectionUtils.isEmpty(changelogs)) {
-                    log.debug("[SYNC-ACHATS-V2] Aucune entrée dans le changelog pour le site {}", site.getCode());
-                    continue;
-                }
+                if (CollectionUtils.isEmpty(changelogs)) continue;
 
-                log.info("[SYNC-ACHATS-V2] {} entrées changelog à traiter pour le site {}", changelogs.size(), site.getCode());
+                log.debug("[SYNC-ACHATS-V2] Site {} : {} entrées changelog", site.getCode(), changelogs.size());
 
                 for (ChangelogResponse.ChangelogItem changelogItem : changelogs) {
                     try {
@@ -255,7 +211,6 @@ public class schedulerPurchases {
                                 invoiceApi.getSupplierInvoiceById(site, String.valueOf(changelogItem.getId()));
 
                         if (invoice == null) {
-                            log.warn("[SYNC-ACHATS-V2] [{}] Impossible de récupérer la facture", changelogItem.getId());
                             facturesIgnorees.incrementAndGet();
                             continue;
                         }
@@ -264,63 +219,53 @@ public class schedulerPurchases {
                                 accountsApi.getCategoryByUrl(invoice.getCategories().getUrl(), site);
 
                         if (!categoryIds.contains(category.getId() != null ? category.getId().longValue() : null)) {
-                            log.debug("[SYNC-ACHATS-V2] [{}] Facture ignorée: catégorie {} non autorisée",
-                                invoice.getId(), category.getId());
                             facturesIgnorees.incrementAndGet();
                             continue;
                         }
 
                         if (!CollectionUtils.isEmpty(statusAFiltrer)
                                 && !statusAFiltrer.contains(invoice.getPaymentStatus())) {
-                            log.debug("[SYNC-ACHATS-V2] [{}] Facture ignorée: statut {} non autorisé",
-                                invoice.getId(), invoice.getPaymentStatus());
                             facturesIgnorees.incrementAndGet();
                             continue;
                         }
 
                         invoiceService.syncInvoice(invoice, site, categoryIds);
                         facturesImportees.incrementAndGet();
-                        log.info("[SYNC-ACHATS-V2] [{}] ✓ Facture importée", invoice.getId());
 
                     } catch (ServiceException e) {
                         erreurs.incrementAndGet();
-                        log.error("[SYNC-ACHATS-V2] [{}] ✗ Erreur service: {}", changelogItem.getId(), e.getMessage());
+                        log.error("[SYNC-ACHATS-V2] [{}] Erreur service: {}", changelogItem.getId(), e.getMessage());
                     } catch (RestClientException e) {
                         erreurs.incrementAndGet();
-                        log.error("[SYNC-ACHATS-V2] [{}] ✗ Erreur API: {}", changelogItem.getId(), e.getMessage());
+                        log.error("[SYNC-ACHATS-V2] [{}] Erreur API: {}", changelogItem.getId(), e.getMessage());
                     } catch (Exception e) {
                         erreurs.incrementAndGet();
-                        log.error("[SYNC-ACHATS-V2] [{}] ✗ Erreur inattendue: {}", changelogItem.getId(), e.getMessage(), e);
+                        log.error("[SYNC-ACHATS-V2] [{}] Erreur: {}", changelogItem.getId(), e.getMessage(), e);
                     }
                 }
 
             } catch (Exception e) {
-                log.error("[SYNC-ACHATS-V2] ✗ Erreur lors du traitement du site {}: {}", site.getCode(), e.getMessage(), e);
+                log.error("[SYNC-ACHATS-V2] Erreur site {}: {}", site.getCode(), e.getMessage(), e);
             }
         }
 
-        // Fin du flux avec bilan
         Map<String, Object> stats = new HashMap<>();
         stats.put("Changelogs traités", changelogsTraites.get());
         stats.put("Factures importées", facturesImportees.get());
-        stats.put("Factures ignorées", facturesIgnorees.get());
-        stats.put("Erreurs", erreurs.get());
+        if (facturesIgnorees.get() > 0)
+            stats.put("Factures ignorées", facturesIgnorees.get());
+        if (erreurs.get() > 0)
+            stats.put("Erreurs", erreurs.get());
         flowLogger.endFlow(correlationId, stats);
     }
-
 
     @Scheduled(cron = "${cron.UpdatePurchaseReglement}")
     public void UpdatePurchaseReglement() {
         List<SiteEntity> sites = siteRepository.findAllByPennylaneAchatTrue();
-        if (CollectionUtils.isEmpty(sites)) {
-            log.trace("[SYNC-REGLEMENTS] Aucun site actif pour la mise à jour des règlements");
-            return;
-        }
+        if (CollectionUtils.isEmpty(sites)) return;
 
-        // Démarrage du flux avec logging amélioré
         String correlationId = flowLogger.startSyncReglements(sites.size());
 
-        // Compteurs pour le bilan
         AtomicInteger reglementsTraites = new AtomicInteger(0);
         AtomicInteger reglementsEnErreur = new AtomicInteger(0);
         AtomicInteger facturesPayees = new AtomicInteger(0);
@@ -328,27 +273,16 @@ public class schedulerPurchases {
         AtomicInteger surpaiements = new AtomicInteger(0);
 
         sites.forEach(site -> {
-            long startSite = System.currentTimeMillis();
-            log.info("[SYNC-REGLEMENTS] Traitement du site {} ...", site.getCode());
-
             List<String> aFactureList = ecritureRepository.getMajReglement(site.getCode());
+            if (CollectionUtils.isEmpty(aFactureList)) return;
 
-            if (CollectionUtils.isEmpty(aFactureList)) {
-                log.debug("[SYNC-REGLEMENTS] Aucune facture à mettre à jour pour le site {}", site.getCode());
-                return;
-            }
-
-            log.info("[SYNC-REGLEMENTS] {} règlement(s) à synchroniser pour le site {}", aFactureList.size(), site.getCode());
+            log.debug("[SYNC-REGLEMENTS] Site {} : {} règlement(s)", site.getCode(), aFactureList.size());
 
             aFactureList.forEach(aFacture -> {
-                long startInvoice = System.currentTimeMillis();
-                log.debug("[SYNC-REGLEMENTS] [{}] Mise à jour en cours...", aFacture);
-
                 try {
                     InvoiceService.ReglementResult result = invoiceService.updateReglements(aFacture, site);
                     reglementsTraites.incrementAndGet();
 
-                    // Logging du statut de paiement
                     switch (result.getStatut()) {
                         case "FULLY_PAID" -> {
                             facturesPayees.incrementAndGet();
@@ -366,7 +300,7 @@ public class schedulerPurchases {
                                 result.getMontantTotal(), result.getMontantPaye(),
                                 result.getMontantPaye() - result.getMontantTotal());
                         }
-                        default -> log.info("[SYNC-REGLEMENTS] [{}] ✓ Statut: {}", aFacture, result.getStatut());
+                        default -> log.debug("[SYNC-REGLEMENTS] [{}] Statut: {}", aFacture, result.getStatut());
                     }
 
                 } catch (final RestClientException e) {
@@ -374,89 +308,65 @@ public class schedulerPurchases {
                     flowLogger.errorApiPennylane(FlowType.SYNC_REGLEMENTS, aFacture, 0, e.getMessage());
                 } catch (final ServiceException e) {
                     reglementsEnErreur.incrementAndGet();
-                    log.error("[SYNC-REGLEMENTS] [{}] ✗ Erreur service: {}", aFacture, e.getMessage());
+                    log.error("[SYNC-REGLEMENTS] [{}] Erreur service: {}", aFacture, e.getMessage());
                 } catch (final Exception e) {
                     reglementsEnErreur.incrementAndGet();
-                    log.error("[SYNC-REGLEMENTS] [{}] ✗ Erreur inattendue: {}", aFacture, e.getMessage(), e);
-                } finally {
-                    long durationInvoice = System.currentTimeMillis() - startInvoice;
-                    log.debug("[SYNC-REGLEMENTS] [{}] Traitement terminé en {} ms", aFacture, durationInvoice);
+                    log.error("[SYNC-REGLEMENTS] [{}] Erreur: {}", aFacture, e.getMessage(), e);
                 }
             });
-
-            long durationSite = System.currentTimeMillis() - startSite;
-            log.info("[SYNC-REGLEMENTS] Fin du traitement du site {} ({} ms)", site.getCode(), durationSite);
         });
 
-        // Fin du flux avec bilan
         Map<String, Object> stats = new HashMap<>();
         stats.put("Règlements traités", reglementsTraites.get());
-        stats.put("Factures entièrement payées", facturesPayees.get());
-        stats.put("Factures partiellement payées", facturesPartielles.get());
-        stats.put("Surpaiements détectés", surpaiements.get());
-        stats.put("Erreurs", reglementsEnErreur.get());
+        if (facturesPayees.get() > 0)
+            stats.put("Factures payées", facturesPayees.get());
+        if (facturesPartielles.get() > 0)
+            stats.put("Factures partielles", facturesPartielles.get());
+        if (surpaiements.get() > 0)
+            stats.put("Surpaiements", surpaiements.get());
+        if (reglementsEnErreur.get() > 0)
+            stats.put("Erreurs", reglementsEnErreur.get());
         flowLogger.endFlow(correlationId, stats);
     }
-
 
     @Scheduled(cron = "${cron.UpdatePurchaseReglementV2}")
     public void UpdatePurchaseReglementV2() {
         List<SiteEntity> sites = siteRepository.findAllByPennylaneAchatTrue();
-        if (CollectionUtils.isEmpty(sites)) {
-            log.trace("[SYNC-REGLEMENTS-V2] Aucun site actif pour la mise à jour des règlements");
-            return;
-        }
+        if (CollectionUtils.isEmpty(sites)) return;
 
-        // Démarrage du flux avec logging amélioré
         String correlationId = flowLogger.startFlow(FlowType.SYNC_REGLEMENTS_V2,
             Map.of("Sites", sites.size()));
 
-        // Compteurs pour le bilan
         AtomicInteger reglementsTraites = new AtomicInteger(0);
         AtomicInteger reglementsEnErreur = new AtomicInteger(0);
 
         sites.forEach(site -> {
-            log.info("[SYNC-REGLEMENTS-V2] Traitement du site {} ...", site.getCode());
-
             List<String> aFactureList = ecritureRepository.getMajReglement(site.getCode());
+            if (CollectionUtils.isEmpty(aFactureList)) return;
 
-            if (CollectionUtils.isEmpty(aFactureList)) {
-                log.debug("[SYNC-REGLEMENTS-V2] Aucune facture à mettre à jour pour le site {}", site.getCode());
-                return;
-            }
-
-            log.info("[SYNC-REGLEMENTS-V2] {} règlement(s) à traiter pour le site {}", aFactureList.size(), site.getCode());
+            log.debug("[SYNC-REGLEMENTS-V2] Site {} : {} règlement(s)", site.getCode(), aFactureList.size());
 
             aFactureList.forEach(aFacture -> {
-                long startInvoice = System.currentTimeMillis();
-                log.debug("[SYNC-REGLEMENTS-V2] [{}] Mise à jour en cours...", aFacture);
-
                 try {
                     invoiceService.updateReglementsV2(aFacture, site);
                     reglementsTraites.incrementAndGet();
-                    log.info("[SYNC-REGLEMENTS-V2] [{}] ✓ Règlement mis à jour", aFacture);
                 } catch (final RestClientException e) {
                     reglementsEnErreur.incrementAndGet();
-                    log.error("[SYNC-REGLEMENTS-V2] [{}] ✗ Erreur API Pennylane: {}", aFacture, e.getMessage());
+                    log.error("[SYNC-REGLEMENTS-V2] [{}] Erreur API: {}", aFacture, e.getMessage());
                 } catch (final ServiceException e) {
                     reglementsEnErreur.incrementAndGet();
-                    log.error("[SYNC-REGLEMENTS-V2] [{}] ✗ Erreur service: {}", aFacture, e.getMessage());
+                    log.error("[SYNC-REGLEMENTS-V2] [{}] Erreur service: {}", aFacture, e.getMessage());
                 } catch (final Exception e) {
                     reglementsEnErreur.incrementAndGet();
-                    log.error("[SYNC-REGLEMENTS-V2] [{}] ✗ Erreur inattendue: {}", aFacture, e.getMessage(), e);
-                } finally {
-                    long durationInvoice = System.currentTimeMillis() - startInvoice;
-                    log.debug("[SYNC-REGLEMENTS-V2] [{}] Traitement terminé en {} ms", aFacture, durationInvoice);
+                    log.error("[SYNC-REGLEMENTS-V2] [{}] Erreur: {}", aFacture, e.getMessage(), e);
                 }
             });
-
-            log.info("[SYNC-REGLEMENTS-V2] Fin du traitement du site {}", site.getCode());
         });
 
-        // Fin du flux avec bilan
         Map<String, Object> stats = new HashMap<>();
         stats.put("Règlements traités", reglementsTraites.get());
-        stats.put("Erreurs", reglementsEnErreur.get());
+        if (reglementsEnErreur.get() > 0)
+            stats.put("Erreurs", reglementsEnErreur.get());
         flowLogger.endFlow(correlationId, stats);
     }
 }
