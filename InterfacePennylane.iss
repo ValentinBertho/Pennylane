@@ -138,14 +138,30 @@ var
   IsUpgrade: Boolean;
 
 // ==============================================================================
-// Détecte si c'est une mise à jour (application.yml existe dans le dossier)
+// Détecte si c'est une mise à jour via le registre (AppId)
+// Utilisable dès InitializeWizard car ne dépend pas de {app}
 // ==============================================================================
-function DetectUpgrade: Boolean;
+function DetectUpgradeFromRegistry: Boolean;
+var
+  InstallPath: String;
+begin
+  Result := RegQueryStringValue(HKLM,
+    'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{E8A3F2B1-7C4D-4E5F-9A6B-1D2E3F4A5B6C}_is1',
+    'InstallLocation', InstallPath);
+  if Result then
+    Result := FileExists(InstallPath + '\application.yml');
+end;
+
+// ==============================================================================
+// Détecte si c'est une mise à jour via le chemin d'install (après résolution {app})
+// Appelée dans CurPageChanged quand {app} est disponible
+// ==============================================================================
+procedure RefreshUpgradeDetection;
 var
   YmlPath: String;
 begin
   YmlPath := ExpandConstant('{app}\application.yml');
-  Result := FileExists(YmlPath);
+  IsUpgrade := FileExists(YmlPath);
 end;
 
 // ==============================================================================
@@ -618,23 +634,30 @@ end;
 // ==============================================================================
 procedure InitializeWizard;
 begin
-  IsUpgrade := DetectUpgrade;
+  // Détection initiale via le registre (ne dépend pas de {app})
+  IsUpgrade := DetectUpgradeFromRegistry;
 
   if IsUpgrade then
-  begin
-    Log('Mode MISE À JOUR détecté - les pages de configuration seront masquées');
-  end
+    Log('Mode MISE À JOUR détecté (registre) - les pages de configuration seront masquées')
   else
-  begin
     Log('Mode NOUVELLE INSTALLATION détecté - affichage des pages de configuration');
-  end;
 
   // Toujours créer les pages (nécessaire pour InnoSetup)
-  // mais elles seront masquées en mode MAJ
+  // mais elles seront masquées en mode MAJ via ShouldSkipPage
   CreateDatabaseConfigPage;
   CreateApiConfigPage;
   CreateAdvancedConfigPage;
   CreateCronConfigPage;
+end;
+
+// ==============================================================================
+// Recalcul du mode upgrade quand le répertoire d'installation change
+// ==============================================================================
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  // Après la page de sélection du répertoire, {app} est résolu
+  if CurPageID = wpSelectDir then
+    RefreshUpgradeDetection;
 end;
 
 // ==============================================================================
