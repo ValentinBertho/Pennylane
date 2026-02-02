@@ -362,13 +362,14 @@ public class InvoiceService {
     }
 
     @Transactional
-    public void updateReglements(String aFacture, SiteEntity aSite) {
+    public ReglementResult updateReglements(String aFacture, SiteEntity aSite) {
+        ReglementResult reglementResult = new ReglementResult();
         String traitement = "UPDATE_REGLEMENTS";
 
         if (aFacture == null || aSite == null) {
             log.error("Impossible de mettre à jour les règlements: ID Facture ou Site null");
             logHelper.error(traitement, "[translate:Impossible de mettre à jour les règlements: ID Facture ou Site null]", null);
-            return;
+            return reglementResult;
         }
 
         String siteCode = defaultIfNull(aSite.getCode(), "UNKNOWN");
@@ -382,7 +383,7 @@ public class InvoiceService {
             if (invoiceResponse == null) {
                 log.warn("Facture non trouvée - ID: {}", aFacture);
                 logHelper.warn(traitement, "Facture non trouvée - ID: " + aFacture);
-                return;
+                return reglementResult;
             }
 
             List<Transaction> transactions = Optional.ofNullable(invoiceResponse.getMatchedTransactions())
@@ -409,7 +410,7 @@ public class InvoiceService {
             if (invoiceId.isEmpty()) {
                 log.error("ID de facture vide, impossible de mettre à jour les règlements");
                 logHelper.error(traitement, "ID facture vide, impossible de mettre à jour règlements", null);
-                return;
+                return reglementResult;
             }
 
             String fullyPaidAt = "";
@@ -426,6 +427,12 @@ public class InvoiceService {
 
             double remaining = (invoiceResponse.getRemainingAmountWithTax() != null) ? remainingAmount : (isPaid ? 0.0 : total);
             String status = computePaymentStatus(isPaid, remaining, total);
+
+            // Alimentation du résultat
+            reglementResult.setStatut(status);
+            reglementResult.setMontantTotal(total);
+            reglementResult.setMontantPaye(total - remaining);
+            reglementResult.setTransactionsTraitees(transactions.size());
 
             log.trace("Données - Payé: {}, Statut: {}, Restant: {}, Payé le: {}, Total: {}",
                     isPaid, status, remainingAmount, fullyPaidAt, total);
@@ -468,6 +475,7 @@ public class InvoiceService {
         } finally {
             logHelper.endTraitement(traitement, start);
         }
+        return reglementResult;
     }
 
     @Transactional

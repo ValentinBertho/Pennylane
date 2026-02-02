@@ -119,9 +119,11 @@ class InvoiceServiceTest {
     @DisplayName("updateReglements - Doit retourner immédiatement si aFacture est null")
     void updateReglements_shouldReturnImmediately_whenFactureIsNull() {
         // When
-        invoiceService.updateReglements(null, testSite);
+        InvoiceService.ReglementResult result = invoiceService.updateReglements(null, testSite);
 
         // Then
+        assertNotNull(result);
+        assertEquals("UNKNOWN", result.getStatut());
         verify(logHelper).error(eq("UPDATE_REGLEMENTS"), anyString(), isNull());
         verify(invoiceApi, never()).getCustomerInvoiceById(any(), anyString());
     }
