@@ -16,7 +16,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Component
@@ -38,14 +37,16 @@ public class ProductApi {
     }
 
     public Product createProduct(Product product, SiteEntity site) {
-        String url = apiUrl + "products";
+        // Utilisation de l'API v2 : POST /api/external/v2/products
+        String url = apiUrlV2 + "products";
 
         product.setId(null);
         try {
-            // L'API Pennylane v1 attend un body enveloppé : {"product": {...}}
-            Map<String, Product> wrappedBody = Map.of("product", product);
+            HttpHeaders headers = headerBuilder(site.getPennylaneToken());
+            headers.setContentType(MediaType.APPLICATION_JSON);
 
-            HttpEntity<Map<String, Product>> requestEntity = new HttpEntity<>(wrappedBody, headerBuilder(site.getPennylaneToken()));
+            // L'API v2 attend le body directement sans wrapper (pas de {"product": {...}})
+            HttpEntity<Product> requestEntity = new HttpEntity<>(product, headers);
 
             ResponseEntity<Product> response = restTemplate.exchange(
                     url,
@@ -54,8 +55,8 @@ public class ProductApi {
                     Product.class
             );
 
-            // Pause pour respecter la limite de 2 requêtes par seconde
-            Thread.sleep(600);
+            // Pause pour respecter la limite de 4 requêtes par seconde (API v2)
+            Thread.sleep(300);
 
             Product apiResponse = response.getBody();
             return apiResponse != null ? apiResponse : null;
@@ -112,7 +113,8 @@ public class ProductApi {
     }
 
     public Product retrieveProduct(String productId, SiteEntity site) {
-        String url = apiUrl + "products/" + productId;
+        // Utilisation de l'API v2 : GET /api/external/v2/products/{id}
+        String url = apiUrlV2 + "products/" + productId;
 
         try {
             ResponseEntity<Product> response = restTemplate.exchange(
@@ -122,8 +124,8 @@ public class ProductApi {
                     Product.class
             );
 
-            // Pause pour respecter la limite de 2 requêtes par seconde
-            Thread.sleep(600);
+            // Pause pour respecter la limite de 4 requêtes par seconde (API v2)
+            Thread.sleep(300);
 
             Product apiResponse = response.getBody();
             return apiResponse != null ? apiResponse : null;
@@ -140,13 +142,15 @@ public class ProductApi {
     }
 
     public Product updateProduct(Product product, SiteEntity site) {
-        String url = apiUrl + "products/" + product.getId();
+        // Utilisation de l'API v2 : PUT /api/external/v2/products/{id}
+        String url = apiUrlV2 + "products/" + product.getId();
         product.setId(null);
         try {
-            // L'API Pennylane v1 attend un body enveloppé : {"product": {...}}
-            Map<String, Product> wrappedBody = Map.of("product", product);
+            HttpHeaders headers = headerBuilder(site.getPennylaneToken());
+            headers.setContentType(MediaType.APPLICATION_JSON);
 
-            HttpEntity<Map<String, Product>> requestEntity = new HttpEntity<>(wrappedBody, headerBuilder(site.getPennylaneToken()));
+            // L'API v2 attend le body directement sans wrapper
+            HttpEntity<Product> requestEntity = new HttpEntity<>(product, headers);
 
             ResponseEntity<Product> response = restTemplate.exchange(
                     url,
@@ -155,8 +159,8 @@ public class ProductApi {
                     Product.class
             );
 
-            // Pause pour respecter la limite de 2 requêtes par seconde
-            Thread.sleep(600);
+            // Pause pour respecter la limite de 4 requêtes par seconde (API v2)
+            Thread.sleep(300);
 
             Product apiResponse = response.getBody();
             return apiResponse != null ? apiResponse : null;
