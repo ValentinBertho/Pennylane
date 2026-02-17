@@ -6,6 +6,7 @@ import fr.mismo.pennylane.dto.accounting.AccountingResponse;
 import fr.mismo.pennylane.dto.accounting.Item;
 import fr.mismo.pennylane.dto.invoice.CategoryResponse;
 import fr.mismo.pennylane.dto.invoice.FileAttachmentResponse;
+import fr.mismo.pennylane.util.ApiRetryHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -197,11 +198,14 @@ public class AccountsApi {
 
     public CategoryResponse getCategoryByUrl(String url, SiteEntity site) {
         try {
-            ResponseEntity<CategoryResponse> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.GET,
-                    new HttpEntity<>(headerBuilder(site.getPennylaneToken())),
-                    CategoryResponse.class
+            ResponseEntity<CategoryResponse> response = ApiRetryHelper.executeWithRetry(
+                    () -> restTemplate.exchange(
+                            url,
+                            HttpMethod.GET,
+                            new HttpEntity<>(headerBuilder(site.getPennylaneToken())),
+                            CategoryResponse.class
+                    ),
+                    "getCategoryByUrl"
             );
             // Pause pour respecter la limite de 2 requêtes par seconde
             Thread.sleep(600);

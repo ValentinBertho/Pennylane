@@ -101,18 +101,25 @@ public class schedulerPurchases {
                     .toList();
 
             if (categoriesAFiltrer.size() != categoryIds.size()) {
-                log.warn("[SYNC-ACHATS] Incohérence catégories pour le site {} (configurées: {}, trouvées: {}), tâche arrêtée",
-                        site.getCode(), categoriesAFiltrer.size(), categoryIds.size());
+                List<String> categoriesTrouvees = categories.stream()
+                        .filter(c -> categoryIds.contains(c.getId()))
+                        .map(Category::getLabel)
+                        .toList();
+                List<String> categoriesManquantes = categoriesAFiltrer.stream()
+                        .filter(configured -> !categoriesTrouvees.contains(configured))
+                        .toList();
 
-                flowLogger.endFlow(correlationId, Map.of(
-                    "Statut", "INTERROMPU",
-                    "Raison", "Incohérence des catégories"
-                ));
-                return;
+                log.warn("[SYNC-ACHATS] Incohérence catégories pour le site {} (configurées: {}, trouvées: {}, manquantes: {}), site ignoré",
+                        site.getCode(), categoriesAFiltrer.size(), categoryIds.size(), categoriesManquantes);
+                continue;
             }
 
             // Récupération factures
             List<SupplierInvoiceResponse.SupplierInvoiceItem> items = invoiceApi.listAllSupplierInvoices(site, categoryIds, syncDateTime);
+            if (items == null) {
+                log.warn("[SYNC-ACHATS] Site {} : récupération des factures impossible (retour API null)", site.getCode());
+                continue;
+            }
             totalFacturesRecuperees.addAndGet(items.size());
 
             // Filtrage factures
@@ -196,6 +203,19 @@ public class schedulerPurchases {
                         .map(Category::getId)
                         .filter(Objects::nonNull)
                         .toList();
+
+                if (categoriesAFiltrer.size() != categoryIds.size()) {
+                    List<String> categoriesTrouvees = categories.stream()
+                            .filter(c -> categoryIds.contains(c.getId()))
+                            .map(Category::getLabel)
+                            .toList();
+                    List<String> categoriesManquantes = categoriesAFiltrer.stream()
+                            .filter(configured -> !categoriesTrouvees.contains(configured))
+                            .toList();
+                    log.warn("[SYNC-ACHATS-V2] Incohérence catégories pour le site {} (manquantes: {}), site ignoré",
+                            site.getCode(), categoriesManquantes);
+                    continue;
+                }
 
                 List<ChangelogResponse.ChangelogItem> changelogs = invoiceApi.listAllSupplierInvoiceChangelogs(site, syncDateTime);
 

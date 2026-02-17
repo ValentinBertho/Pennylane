@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.mismo.pennylane.dao.entity.SiteEntity;
 import fr.mismo.pennylane.dto.supplier.ResponseSupplier;
 import fr.mismo.pennylane.dto.supplier.Supplier;
+import fr.mismo.pennylane.util.ApiRetryHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -62,11 +63,14 @@ public class SupplierApi {
     public Supplier retrieveSupplier(String supplierId, SiteEntity site) {
         String url = apiUrlV2 + "suppliers/" + supplierId;
         try {
-            ResponseEntity<Supplier> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.GET,
-                    new HttpEntity<>(createHeaders(site.getPennylaneToken())),
-                    Supplier.class
+            ResponseEntity<Supplier> response = ApiRetryHelper.executeWithRetry(
+                    () -> restTemplate.exchange(
+                            url,
+                            HttpMethod.GET,
+                            new HttpEntity<>(createHeaders(site.getPennylaneToken())),
+                            Supplier.class
+                    ),
+                    "retrieveSupplier"
             );
 
             // Pause pour respecter la limite de 2 requêtes par seconde
