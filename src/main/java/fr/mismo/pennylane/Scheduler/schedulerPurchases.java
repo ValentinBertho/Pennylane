@@ -94,27 +94,42 @@ public class schedulerPurchases {
             long durationCategories = System.currentTimeMillis() - startCategories;
             log.debug("Site {} - Récupération des catégories effectuée en {} ms", site.getCode(), durationCategories);
 
-            List<String> categoriesAFiltrer = config.getCategoriesAFiltrer();
+            List<String> categoriesAFiltrer = Optional.ofNullable(config.getCategoriesAFiltrer())
+                    .orElseGet(Collections::emptyList);
 
-            List<Long> categoryIds = categories.stream()
-                    .filter(c -> categoriesAFiltrer.contains(c.getLabel()))
-                    .map(Category::getId)
+            Map<String, Long> categoriesFoundByLabel = categories.stream()
+                    .filter(Objects::nonNull)
+                    .filter(category -> StringUtils.hasText(category.getLabel()) && category.getId() != null)
+                    .collect(Collectors.toMap(
+                            Category::getLabel,
+                            Category::getId,
+                            (existing, replacement) -> existing
+                    ));
+
+            List<Long> categoryIds = categoriesAFiltrer.stream()
+                    .map(categoriesFoundByLabel::get)
                     .filter(Objects::nonNull)
                     .toList();
 
-            // Vérification : correspondance entre les deux listes
-            if (categoriesAFiltrer.size() != categoryIds.size()) {
-                log.warn("⚠️ Les catégories configurées et les catégories trouvées ne correspondent pas : "
-                                + "categoriesAFiltrer={} ({}), categoryIds={} ({})",
-                        categoriesAFiltrer, categoriesAFiltrer.size(),
-                        categoryIds, categoryIds.size());
-                log.warn("Tâche SyncPurchases arrêtée pour éviter une incohérence.");
-                return; // quitte la méthode, donc stoppe le cron ici
+            List<String> missingCategories = categoriesAFiltrer.stream()
+                    .filter(label -> !categoriesFoundByLabel.containsKey(label))
+                    .toList();
+
+            if (!missingCategories.isEmpty()) {
+                log.error("Incohérence catégories pour le site {} (configurées: {}, trouvées: {}). Catégories manquantes: {}",
+                        site.getCode(), categoriesAFiltrer.size(), categoryIds.size(), missingCategories);
+
+                // On isole uniquement le site en erreur au lieu de bloquer tout le cron
+                continue;
             }
 
             // Chrono récupération factures
             long startInvoicesApi = System.currentTimeMillis();
             List<SupplierInvoiceResponse.SupplierInvoiceItem> items = invoiceApi.listAllSupplierInvoices(site, categoryIds, syncDateTime);
+            if (items == null) {
+                log.warn("Site {} - Impossible de récupérer les factures depuis Pennylane (réponse nulle)", site.getCode());
+                continue;
+            }
 
             long durationInvoicesApi = System.currentTimeMillis() - startInvoicesApi;
             log.debug("Site {} - Récupération des factures effectuée en {} ms ({} factures brutes)",
@@ -202,13 +217,34 @@ public class schedulerPurchases {
         for (SiteEntity site : sites) {
             try {
                 List<Category> categories = invoiceApi.listAllCategories(site);
-                List<String> categoriesAFiltrer = config.getCategoriesAFiltrer();
+                List<String> categoriesAFiltrer = Optional.ofNullable(config.getCategoriesAFiltrer())
+                        .orElseGet(Collections::emptyList);
 
-                List<Long> categoryIds = categories.stream()
-                        .filter(c -> categoriesAFiltrer.contains(c.getLabel()))
-                        .map(Category::getId)
+                Map<String, Long> categoriesFoundByLabel = Optional.ofNullable(categories)
+                        .orElseGet(Collections::emptyList)
+                        .stream()
+                        .filter(Objects::nonNull)
+                        .filter(category -> StringUtils.hasText(category.getLabel()) && category.getId() != null)
+                        .collect(Collectors.toMap(
+                                Category::getLabel,
+                                Category::getId,
+                                (existing, replacement) -> existing
+                        ));
+
+                List<Long> categoryIds = categoriesAFiltrer.stream()
+                        .map(categoriesFoundByLabel::get)
                         .filter(Objects::nonNull)
                         .toList();
+
+                List<String> missingCategories = categoriesAFiltrer.stream()
+                        .filter(label -> !categoriesFoundByLabel.containsKey(label))
+                        .toList();
+
+                if (!missingCategories.isEmpty()) {
+                    log.error("Incohérence catégories pour le site {} (configurées: {}, trouvées: {}). Catégories manquantes: {}",
+                            site.getCode(), categoriesAFiltrer.size(), categoryIds.size(), missingCategories);
+                    continue;
+                }
 
                 List<ChangelogResponse.ChangelogItem> changelogs = invoiceApi.listAllSupplierInvoiceChangelogs(site, syncDateTime);
 

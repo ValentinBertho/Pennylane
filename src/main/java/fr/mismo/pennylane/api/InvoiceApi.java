@@ -5,6 +5,7 @@ import fr.mismo.pennylane.dao.entity.SiteEntity;
 import fr.mismo.pennylane.dto.Category;
 import fr.mismo.pennylane.dto.CategoryListResponse;
 import fr.mismo.pennylane.dto.invoice.*;
+import fr.mismo.pennylane.util.ApiRetryHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -110,12 +111,19 @@ public class InvoiceApi {
 
             HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
 
-            ResponseEntity<String> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.GET,
-                    requestEntity,
-                    String.class
+            ResponseEntity<String> response = ApiRetryHelper.executeWithRetry(
+                    "getSupplierInvoiceById",
+                    () -> restTemplate.exchange(
+                            url,
+                            HttpMethod.GET,
+                            requestEntity,
+                            String.class
+                    )
             );
+
+            if (response == null) {
+                throw new ApiException("Réponse nulle lors de la récupération de la facture fournisseur " + invoiceId);
+            }
 
             Thread.sleep(600);
 
@@ -191,12 +199,19 @@ public class InvoiceApi {
 
             HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
 
-            ResponseEntity<String> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.GET,
-                    requestEntity,
-                    String.class
+            ResponseEntity<String> response = ApiRetryHelper.executeWithRetry(
+                    "getSupplierInvoiceById",
+                    () -> restTemplate.exchange(
+                            url,
+                            HttpMethod.GET,
+                            requestEntity,
+                            String.class
+                    )
             );
+
+            if (response == null) {
+                throw new ApiException("Réponse nulle lors de la récupération de la facture fournisseur " + invoiceId);
+            }
 
             Thread.sleep(600);
 
@@ -382,13 +397,21 @@ public class InvoiceApi {
                 }
 
                 // Appel API
-                ResponseEntity<SupplierInvoiceResponse> response = restTemplate.exchange(
-                        url,
-                        HttpMethod.GET,
-                        requestEntity,
-                        SupplierInvoiceResponse.class,
-                        uriVariables
+                ResponseEntity<SupplierInvoiceResponse> response = ApiRetryHelper.executeWithRetry(
+                        "listAllSupplierInvoices",
+                        () -> restTemplate.exchange(
+                                url,
+                                HttpMethod.GET,
+                                requestEntity,
+                                SupplierInvoiceResponse.class,
+                                uriVariables
+                        )
                 );
+
+                if (response == null) {
+                    log.warn("Réponse nulle de Pennylane pour la récupération des factures fournisseurs");
+                    break;
+                }
 
                 SupplierInvoiceResponse responseBody = response.getBody();
                 if (responseBody == null) break;
@@ -400,6 +423,7 @@ public class InvoiceApi {
             // Pause pour respecter la limite de 2 requêtes par seconde
             Thread.sleep(600);
         } catch (Exception e) {
+            log.error("Erreur lors de la récupération des factures fournisseurs: {}", e.getMessage(), e);
             return null;
         }
 
@@ -447,13 +471,21 @@ public class InvoiceApi {
                     uriVariables.put("startDate", isoDate);
                 }
 
-                ResponseEntity<ChangelogResponse> response = restTemplate.exchange(
-                        url,
-                        HttpMethod.GET,
-                        requestEntity,
-                        ChangelogResponse.class,
-                        uriVariables
+                ResponseEntity<ChangelogResponse> response = ApiRetryHelper.executeWithRetry(
+                        "listAllSupplierInvoiceChangelogs",
+                        () -> restTemplate.exchange(
+                                url,
+                                HttpMethod.GET,
+                                requestEntity,
+                                ChangelogResponse.class,
+                                uriVariables
+                        )
                 );
+
+                if (response == null) {
+                    log.warn("Réponse nulle de Pennylane pour les changelogs de factures fournisseurs");
+                    break;
+                }
 
                 ChangelogResponse body = response.getBody();
                 if (body == null) break;
@@ -467,7 +499,7 @@ public class InvoiceApi {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Erreur lors de la récupération des changelogs fournisseurs: {}", e.getMessage(), e);
             return null;
         }
 
