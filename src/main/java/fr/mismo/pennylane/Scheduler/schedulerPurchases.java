@@ -93,6 +93,10 @@ public class schedulerPurchases {
         for (SiteEntity site : sites) {
             // Récupération catégories
             List<Category> categories = categoryCacheService.getCategories(site);
+            if (CollectionUtils.isEmpty(categories)) {
+                log.warn("[SYNC-ACHATS] Site {} : aucune catégorie récupérée, site ignoré", site.getCode());
+                continue;
+            }
 
             List<Long> categoryIds = categories.stream()
                     .filter(c -> categoriesAFiltrer.contains(c.getLabel()))
@@ -197,6 +201,10 @@ public class schedulerPurchases {
         for (SiteEntity site : sites) {
             try {
                 List<Category> categories = invoiceApi.listAllCategories(site);
+                if (CollectionUtils.isEmpty(categories)) {
+                    log.warn("[SYNC-ACHATS-V2] Site {} : aucune catégorie récupérée, site ignoré", site.getCode());
+                    continue;
+                }
 
                 List<Long> categoryIds = categories.stream()
                         .filter(c -> categoriesAFiltrer.contains(c.getLabel()))

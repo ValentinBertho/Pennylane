@@ -5,6 +5,7 @@ import fr.mismo.pennylane.dao.entity.SiteEntity;
 import fr.mismo.pennylane.dto.Category;
 import fr.mismo.pennylane.dto.CategoryListResponse;
 import fr.mismo.pennylane.dto.invoice.*;
+import fr.mismo.pennylane.util.ApiRetryHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,6 +31,9 @@ public class InvoiceApi {
 
     @Value("${api.url_v1}")
     private String apiUrl;
+
+    @Value("${api.url_v2}")
+    private String apiUrlV2;
 
     @Autowired
     public InvoiceApi(RestTemplate restTemplate, ObjectMapper objectMapper) {
@@ -264,35 +268,43 @@ public class InvoiceApi {
     }
 
     public List<Category> listAllCategories(SiteEntity site) {
-        String baseUrl = apiUrl + "categories";
+        String baseUrl = apiUrlV2 + "categories?limit={limit}";
         List<Category> allCategories = new ArrayList<>();
         String cursor = null;
         boolean hasMore = true;
 
         while (hasMore) {
-            String url = baseUrl;
-            if (cursor != null && !cursor.isEmpty()) {
-                url += "?cursor=" + cursor;
-            }
-
             try {
                 HttpHeaders headers = new HttpHeaders();
                 headers.set("accept", "application/json");
                 headers.set("Authorization", "Bearer " + site.getPennylaneToken());
 
                 HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
-                ResponseEntity<CategoryListResponse> response = restTemplate.exchange(
-                        url,
-                        HttpMethod.GET,
-                        requestEntity,
-                        CategoryListResponse.class
+
+                String url = baseUrl + (cursor != null && !cursor.isEmpty() ? "&cursor={cursor}" : "");
+                Map<String, Object> uriVariables = new HashMap<>();
+                uriVariables.put("limit", 100);
+                if (cursor != null && !cursor.isEmpty()) {
+                    uriVariables.put("cursor", cursor);
+                }
+
+                ResponseEntity<CategoryListResponse> response = ApiRetryHelper.executeWithRetry(
+                        () -> restTemplate.exchange(
+                                url,
+                                HttpMethod.GET,
+                                requestEntity,
+                                CategoryListResponse.class,
+                                uriVariables
+                        ),
+                        "listAllCategories"
                 );
 
-                Thread.sleep(1100); // Respect des limites de débit
+                Thread.sleep(600);
 
                 CategoryListResponse body = response.getBody();
-                if (body == null) break;
-                if (body.getItems() == null) break;
+                if (body == null || body.getItems() == null) {
+                    break;
+                }
 
                 allCategories.addAll(body.getItems());
                 hasMore = body.isHas_more();
