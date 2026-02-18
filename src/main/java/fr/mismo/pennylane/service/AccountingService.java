@@ -229,8 +229,17 @@ public class AccountingService {
                 result.produitsCrees += produitsCreesCount;
             } else if (response != null && "ALREADY_EXISTS".equals(response.getResponseStatus())) {
                 flowLogger.infoFactureIgnoree(FlowType.SYNC_ECRITURES, factureRef, "Facture déjà existante dans Pennylane");
-                logService.traiterFactureSafe(first.getNoVFacture(), response.getId().toString(), response.getId().toString(), true);
-                logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(first.getNoVFacture()), "La facture existe déjà dans Pennylane.", 4);
+
+                String existingId = response.getId() != null ? response.getId().toString() : null;
+                if (existingId != null) {
+                    logService.traiterFactureSafe(first.getNoVFacture(), existingId, existingId, true);
+                }
+
+                logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(first.getNoVFacture()),
+                        existingId != null
+                                ? "La facture existe déjà dans Pennylane (ID: " + existingId + ")."
+                                : "La facture existe déjà dans Pennylane.",
+                        4);
                 result.incrementFacturesIgnorees();
             } else if (response != null && "FAILED".equals(response.getResponseStatus())) {
                 flowLogger.errorApiPennylane(FlowType.SYNC_ECRITURES, factureRef, 422, response.getResponseMessage());

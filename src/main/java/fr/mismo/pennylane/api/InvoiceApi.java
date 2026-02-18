@@ -1,5 +1,6 @@
 package fr.mismo.pennylane.api;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.mismo.pennylane.dao.entity.SiteEntity;
 import fr.mismo.pennylane.dto.Category;
@@ -83,6 +84,17 @@ public class InvoiceApi {
         } catch (HttpClientErrorException e) {
             // Gestion du 422 ou autres 4xx
             log.warn("Erreur HTTP lors de la création de la facture : {}", e.getStatusCode());
+
+            if (e.getStatusCode() == HttpStatus.UNPROCESSABLE_ENTITY
+                    && e.getResponseBodyAsString() != null
+                    && e.getResponseBodyAsString().contains("External reference has already been taken")) {
+                InvoiceResponse existingInvoice = findCustomerInvoiceByExternalReference(site, invoice.getExternalReference());
+                if (existingInvoice != null && existingInvoice.getId() != null) {
+                    existingInvoice.setResponseStatus("ALREADY_EXISTS");
+                    existingInvoice.setResponseMessage("Facture déjà existante (external_reference)");
+                    return existingInvoice;
+                }
+            }
 
             InvoiceResponse errorResponse = new InvoiceResponse();
             errorResponse.setResponseStatus("FAILED");
@@ -318,6 +330,48 @@ public class InvoiceApi {
         return allCategories;
     }
 
+
+    public InvoiceResponse findCustomerInvoiceByExternalReference(SiteEntity site, String externalReference) {
+        if (externalReference == null || externalReference.isBlank()) {
+            return null;
+        }
+
+        String filterJson = String.format("[{\"field\": \"external_reference\", \"operator\": \"eq\", \"value\": \"%s\"}]",
+                externalReference.replace("\"", ""));
+        String url = apiUrl + "customer_invoices?limit={limit}&sort={sort}&filter={filter}";
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("accept", "application/json");
+            headers.set("Authorization", "Bearer " + site.getPennylaneToken());
+
+            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    requestEntity,
+                    String.class,
+                    Map.of("limit", 1, "sort", "-id", "filter", filterJson)
+            );
+
+            String body = response.getBody();
+            if (body == null || body.isBlank()) {
+                return null;
+            }
+
+            JsonNode root = objectMapper.readTree(body);
+            JsonNode items = root.path("items");
+            if (!items.isArray() || items.isEmpty()) {
+                return null;
+            }
+
+            return objectMapper.treeToValue(items.get(0), InvoiceResponse.class);
+        } catch (Exception e) {
+            log.warn("Impossible de retrouver une facture par external_reference={} : {}", externalReference, e.getMessage());
+            return null;
+        }
+    }
 
     public InvoiceResponse checkInvoiceExists(SiteEntity site, String invoiceId) {
         try {

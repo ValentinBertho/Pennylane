@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.mismo.pennylane.dao.entity.SiteEntity;
 import fr.mismo.pennylane.dto.Category;
 import fr.mismo.pennylane.dto.CategoryListResponse;
+import fr.mismo.pennylane.dto.invoice.Invoice;
+import fr.mismo.pennylane.dto.invoice.InvoiceResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,6 +16,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
@@ -39,6 +42,7 @@ class InvoiceApiTest {
     void setUp() {
         invoiceApi = new InvoiceApi(restTemplate, new ObjectMapper());
         ReflectionTestUtils.setField(invoiceApi, "apiUrlV2", "https://app.pennylane.com/api/external/v2/");
+        ReflectionTestUtils.setField(invoiceApi, "apiUrl", "https://app.pennylane.com/api/external/v2/");
 
         site = new SiteEntity();
         site.setPennylaneToken("token-test");
@@ -91,4 +95,32 @@ class InvoiceApiTest {
         verify(restTemplate).exchange(startsWith("https://app.pennylane.com/api/external/v2/categories"),
                 eq(HttpMethod.GET), any(), eq(CategoryListResponse.class), any(Map.class));
     }
+
+    @Test
+    @DisplayName("createInvoice - doit retourner ALREADY_EXISTS sur 422 external_reference dupliquée")
+    void createInvoice_shouldReturnAlreadyExistsWhenExternalReferenceTaken() {
+        Invoice invoice = new Invoice();
+        invoice.setExternalReference("MIS26TO0100067");
+
+        HttpClientErrorException duplicateException = HttpClientErrorException.create(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                "Unprocessable Entity",
+                null,
+                "{\"status\":422,\"error\":\"External reference has already been taken\"}".getBytes(),
+                null
+        );
+
+        when(restTemplate.exchange(contains("customer_invoices/import"), eq(HttpMethod.POST), any(), eq(InvoiceResponse.class)))
+                .thenThrow(duplicateException);
+
+        String existingInvoiceBody = "{\"items\":[{\"id\":987654,\"external_reference\":\"MIS26TO0100067\"}],\"has_more\":false}";
+        when(restTemplate.exchange(contains("customer_invoices?limit={limit}"), eq(HttpMethod.GET), any(), eq(String.class), any(Map.class)))
+                .thenReturn(new ResponseEntity<>(existingInvoiceBody, HttpStatus.OK));
+
+        InvoiceResponse response = invoiceApi.createInvoice(invoice, site, false);
+
+        assertEquals("ALREADY_EXISTS", response.getResponseStatus());
+        assertEquals(987654L, response.getId());
+    }
+
 }

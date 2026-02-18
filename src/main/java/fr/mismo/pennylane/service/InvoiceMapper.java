@@ -111,18 +111,30 @@ public class InvoiceMapper {
 
                 // Mappage du client
                 try {
-                    invoice.setCustomerId((firstInvoice.getCustomerPennylaneId() != null ?
-                            String.valueOf(firstInvoice.getCustomerPennylaneId()) : ""));
-
-                    invoice.setId(firstInvoice.getInvoicePennylaneId() != null ?
-                            Long.valueOf(firstInvoice.getInvoicePennylaneId()) : null);
-
+                    invoice.setCustomerId(Optional.ofNullable(firstInvoice.getCustomerPennylaneId())
+                            .map(String::trim)
+                            .orElse(""));
                 } catch (Exception e) {
                     log.error("Erreur lors du mapping du client pour la facture {}: {}",
                             invoiceNumber, e.getMessage(), e);
-                     logRepository.ajouterLigneForum("V_FACTURE", invoiceNumber,
+                    logRepository.ajouterLigneForum("V_FACTURE", invoiceNumber,
                             "Erreur dans le mapping du client : " + e.getMessage(), 2);
                     invoice.setCustomerId(null);
+                }
+
+                // Mappage de l'ID de facture Pennylane (utilisé pour déterminer create vs update)
+                String invoicePennylaneId = Optional.ofNullable(firstInvoice.getInvoicePennylaneId())
+                        .map(String::trim)
+                        .orElse("");
+                if (!invoicePennylaneId.isEmpty()) {
+                    try {
+                        invoice.setId(Long.valueOf(invoicePennylaneId));
+                    } catch (NumberFormatException e) {
+                        log.warn("InvoicePennylaneId invalide pour la facture {}: '{}'", invoiceNumber, invoicePennylaneId);
+                        logRepository.ajouterLigneForum("V_FACTURE", invoiceNumber,
+                                "InvoicePennylaneId invalide : " + invoicePennylaneId, 3);
+                        invoice.setId(null);
+                    }
                 }
             } catch (Exception e) {
                 log.error("Erreur lors du mapping des données principales de la facture {}: {}",
