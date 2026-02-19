@@ -47,9 +47,16 @@ public class InvoiceApi {
 
         InvoiceResponse exist = null;
 
-        // Vérification si la facture existe déjà, uniquement si withVerif est true ET que l'ID est présent
-        if (withVerif && invoice.getId() != null) {
-            exist = checkInvoiceExists(site, String.valueOf(invoice.getId()));
+        // Vérification préventive pour éviter les POST inutiles (et 422 duplicate external_reference)
+        if (Boolean.TRUE.equals(withVerif)) {
+            if (invoice.getId() != null) {
+                exist = checkInvoiceExists(site, String.valueOf(invoice.getId()));
+            }
+
+            // Fallback si l'ID Pennylane n'est pas renseigné/exploitable localement : vérification par external_reference
+            if (exist == null) {
+                exist = findCustomerInvoiceByExternalReference(site, invoice.getExternalReference());
+            }
 
             if (exist != null) {
                 String errorMessage = String.format("La facture avec le numéro %s existe déjà.", invoice.getInvoiceNumber());
@@ -59,9 +66,9 @@ public class InvoiceApi {
                 exist.setResponseMessage(errorMessage);
                 return exist;
             }
-            else{
-                invoice.setId(null);
-            }
+
+            // Si non trouvée, on continue vers la création
+            invoice.setId(null);
         }
 
         HttpHeaders headers = new HttpHeaders();

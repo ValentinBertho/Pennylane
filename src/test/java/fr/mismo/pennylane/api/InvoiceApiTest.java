@@ -123,4 +123,24 @@ class InvoiceApiTest {
         assertEquals(987654L, response.getId());
     }
 
+
+    @Test
+    @DisplayName("createInvoice - avec withVerif=true doit éviter le POST si external_reference existe déjà")
+    void createInvoice_shouldSkipPostWhenExternalReferenceAlreadyExistsInPrecheck() {
+        Invoice invoice = new Invoice();
+        invoice.setExternalReference("MIS26TO0100062");
+        invoice.setInvoiceNumber("MIS26TO0100062");
+
+        String existingInvoiceBody = "{\"items\":[{\"id\":123456,\"external_reference\":\"MIS26TO0100062\"}],\"has_more\":false}";
+        when(restTemplate.exchange(contains("customer_invoices?limit={limit}"), eq(HttpMethod.GET), any(), eq(String.class), any(Map.class)))
+                .thenReturn(new ResponseEntity<>(existingInvoiceBody, HttpStatus.OK));
+
+        InvoiceResponse response = invoiceApi.createInvoice(invoice, site, true);
+
+        assertEquals("ALREADY_EXISTS", response.getResponseStatus());
+        assertEquals(123456L, response.getId());
+        verify(restTemplate, times(0))
+                .exchange(contains("customer_invoices/import"), eq(HttpMethod.POST), any(), eq(InvoiceResponse.class));
+    }
+
 }
