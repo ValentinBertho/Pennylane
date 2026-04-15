@@ -159,6 +159,14 @@ public class AccountsApi {
             );
             Thread.sleep(600);
             return response.getBody();
+        } catch (HttpClientErrorException.UnprocessableEntity e) {
+            String responseBody = e.getResponseBodyAsString();
+            if (responseBody != null && responseBody.toLowerCase().contains("already exists") && newAccount != null && newAccount.getNumber() != null) {
+                log.info("Le compte {} existe déjà dans Pennylane. Récupération du compte existant.", newAccount.getNumber());
+                return getLedgerAccountByNumber(newAccount.getNumber(), site);
+            }
+            handleException("createLedgerAccount", url, e);
+            return null;
         } catch (Exception e) {
             handleException("createLedgerAccount", url, e);
             return null;

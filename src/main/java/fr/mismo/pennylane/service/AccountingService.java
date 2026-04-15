@@ -497,11 +497,28 @@ public class AccountingService {
                 .findFirst();
 
         if (existingItem.isEmpty()) {
+            Item remoteExistingItem = accountsApi.getLedgerAccountByNumber(compteGeneral, site);
+            if (remoteExistingItem != null) {
+                log.info("Compte déjà présent dans Pennylane, réutilisation du compte {}.", compteGeneral);
+                comptes.add(remoteExistingItem);
+                return remoteExistingItem;
+            }
+
             Item newItem = new Item();
             newItem.setNumber(compteGeneral);
             newItem.setLabel(raisonSociale != null ? raisonSociale : "Auto interface Pennylane");
             try {
                 Item createdItem = accountsApi.createLedgerAccount(newItem, site);
+                if (createdItem == null) {
+                    Item fallbackItem = accountsApi.getLedgerAccountByNumber(compteGeneral, site);
+                    if (fallbackItem != null) {
+                        log.info("Compte récupéré après tentative de création: {}.", compteGeneral);
+                        comptes.add(fallbackItem);
+                        return fallbackItem;
+                    }
+                    log.error("Impossible de créer ou récupérer le compte {} dans Pennylane.", compteGeneral);
+                    return null;
+                }
                 // FIXME: Remplacer ce sleep par un mécanisme de retry/backoff approprié
                 // Le sleep bloque le thread et n'est pas une bonne pratique
                 Thread.sleep(2000);
