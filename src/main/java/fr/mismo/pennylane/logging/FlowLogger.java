@@ -59,16 +59,16 @@ public class FlowLogger {
     // Alias conservés pour compatibilité
     public String startSyncEcritures(int nbLots, int nbSites) {
         String correlationId = startFlow(FlowType.SYNC_ECRITURES,
-            Map.of("Sites actifs", nbSites, "Lots à traiter", nbLots));
+                Map.of("Sites actifs", nbSites, "Lots à traiter", nbLots));
         return correlationId;
     }
 
     public String startSyncAchats(int daysBackward, List<String> statusFilters, List<String> categoryFilters) {
         LocalDateTime dateDebut = LocalDateTime.now().minusDays(daysBackward);
         return startFlow(FlowType.SYNC_ACHATS,
-            Map.of("Période", daysBackward + " jours (depuis le " + dateDebut.format(DateTimeFormatter.ISO_LOCAL_DATE) + ")",
-                   "Statuts", statusFilters.toString(),
-                   "Catégories", categoryFilters.toString()));
+                Map.of("Période", daysBackward + " jours (depuis le " + dateDebut.format(DateTimeFormatter.ISO_LOCAL_DATE) + ")",
+                        "Statuts", statusFilters.toString(),
+                        "Catégories", categoryFilters.toString()));
     }
 
     public String startSyncReglements(int nbSites) {
@@ -129,7 +129,7 @@ public class FlowLogger {
         // Statistiques personnalisées
         if (customStats != null) {
             customStats.forEach((key, value) ->
-                logLine(flowCode, "  " + key + ": " + value, hasErrors));
+                    logLine(flowCode, "  " + key + ": " + value, hasErrors));
         }
 
         logLine(flowCode, "Statut: " + (hasErrors ? "PARTIEL" : "SUCCÈS"), hasErrors);
@@ -139,9 +139,9 @@ public class FlowLogger {
      * Clôture un flux de synchronisation des écritures avec bilan détaillé.
      */
     public void endSyncEcritures(String correlationId, int lotsTraites, int lotsTotal,
-                                   int facturesCrees, int facturesIgnorees,
-                                   int clientsCrees, int produitsCrees,
-                                   int documentsUploades, List<String> erreurs) {
+                                 int facturesCrees, int facturesIgnorees,
+                                 int clientsCrees, int produitsCrees,
+                                 int documentsUploades, List<String> erreurs) {
         FlowContext ctx = flowContexts.remove(correlationId);
         if (ctx == null) return;
         CorrelationIdManager.clear();
@@ -185,8 +185,8 @@ public class FlowLogger {
      * Clôture un flux d'import des achats avec bilan détaillé.
      */
     public void endSyncAchats(String correlationId, int facturesRecuperees, int facturesRetenues,
-                               int facturesImportees, int facturesIgnorees,
-                               int fournisseursCrees, int documentsTelechargees) {
+                              int facturesImportees, int facturesIgnorees,
+                              int fournisseursCrees, int documentsTelechargees) {
         FlowContext ctx = flowContexts.remove(correlationId);
         if (ctx == null) return;
         CorrelationIdManager.clear();
@@ -236,9 +236,9 @@ public class FlowLogger {
      * Log le statut de paiement d'une facture.
      */
     public void logStatutPaiement(FlowType flowType, String reference, String statut,
-                                   double montantPaye, double montantTotal) {
+                                  double montantPaye, double montantTotal) {
         log.info("[{}] [{}] {} - {}/{}€", flowType.getCode(), reference, statut,
-            String.format("%.2f", montantPaye), String.format("%.2f", montantTotal));
+                String.format("%.2f", montantPaye), String.format("%.2f", montantTotal));
         markActivity();
     }
 
@@ -286,9 +286,9 @@ public class FlowLogger {
      * Log un règlement.
      */
     public void logReglement(FlowType flowType, String reference, String dateReglement,
-                              double montant, String moyenPaiement) {
+                             double montant, String moyenPaiement) {
         log.debug("[{}] [{}] Règlement {} : +{}€ ({})", flowType.getCode(), reference,
-            dateReglement, String.format("%.2f", montant), moyenPaiement);
+                dateReglement, String.format("%.2f", montant), moyenPaiement);
     }
 
     /**
@@ -304,10 +304,10 @@ public class FlowLogger {
      * Log les détails de validation des montants (seulement si incohérence).
      */
     public void logValidationMontants(FlowType flowType, String reference,
-                                        double montantHT, double montantTVA, double montantTTC) {
+                                      double montantHT, double montantTVA, double montantTTC) {
         // Seulement en debug, pas de bruit en production
         log.debug("[{}] [{}] Montants: HT={}€, TVA={}€, TTC={}€", flowType.getCode(), reference,
-            String.format("%.2f", montantHT), String.format("%.2f", montantTVA), String.format("%.2f", montantTTC));
+                String.format("%.2f", montantHT), String.format("%.2f", montantTVA), String.format("%.2f", montantTTC));
     }
 
     /**
@@ -323,26 +323,26 @@ public class FlowLogger {
     // ═══════════════════════════════════════════════════════════════════════
 
     public void warnIncoherenceMontants(FlowType flowType, String reference,
-                                         double montantHT, double montantTVA, double montantTTC, double ecart) {
+                                        double montantHT, double montantTVA, double montantTTC, double ecart) {
         log.warn("[{}] [{}] Incohérence montants: HT({})+TVA({})!=TTC({}), écart={}€",
-            flowType.getCode(), reference,
-            String.format("%.2f", montantHT), String.format("%.2f", montantTVA),
-            String.format("%.2f", montantTTC), String.format("%.2f", ecart));
+                flowType.getCode(), reference,
+                String.format("%.2f", montantHT), String.format("%.2f", montantTVA),
+                String.format("%.2f", montantTTC), String.format("%.2f", ecart));
         markActivity();
     }
 
     public void warnSiretInvalide(FlowType flowType, String reference, String nomClient, String siret) {
         log.warn("[{}] [{}] SIRET invalide pour \"{}\" ({}), client créé sans SIRET",
-            flowType.getCode(), reference, nomClient, siret);
+                flowType.getCode(), reference, nomClient, siret);
         markActivity();
     }
 
     public void warnSurpaiement(FlowType flowType, String reference,
-                                 double montantFacture, double montantEncaisse, double excedent) {
+                                double montantFacture, double montantEncaisse, double excedent) {
         log.warn("[{}] [{}] Surpaiement: facture={}€, encaissé={}€, excédent={}€",
-            flowType.getCode(), reference,
-            String.format("%.2f", montantFacture), String.format("%.2f", montantEncaisse),
-            String.format("%.2f", excedent));
+                flowType.getCode(), reference,
+                String.format("%.2f", montantFacture), String.format("%.2f", montantEncaisse),
+                String.format("%.2f", excedent));
         markActivity();
     }
 
@@ -353,12 +353,12 @@ public class FlowLogger {
 
     public void warnCircuitBreakerOpen(FlowType flowType, String nomCircuitBreaker, String raison, int dureeAttente) {
         log.warn("[{}] Circuit Breaker \"{}\" OPEN: {} (attente {}s)",
-            flowType.getCode(), nomCircuitBreaker, raison, dureeAttente);
+                flowType.getCode(), nomCircuitBreaker, raison, dureeAttente);
     }
 
     public void warnDeadlock(FlowType flowType, String procedure, int tentative, int maxTentatives) {
         log.warn("[{}] Deadlock SQL sur {} - tentative {}/{}",
-            flowType.getCode(), procedure, tentative, maxTentatives);
+                flowType.getCode(), procedure, tentative, maxTentatives);
     }
 
     public void infoDeadlockResolu(FlowType flowType, int tentatives, long dureeMs) {
@@ -371,7 +371,7 @@ public class FlowLogger {
 
     public void errorMontantInvalide(FlowType flowType, String reference, double montant, String raison) {
         log.error("[{}] [{}] Facture rejetée - montant invalide: {} ({}€)",
-            flowType.getCode(), reference, raison, String.format("%.2f", montant));
+                flowType.getCode(), reference, raison, String.format("%.2f", montant));
         markActivity();
         incrementError();
     }
@@ -383,23 +383,23 @@ public class FlowLogger {
     }
 
     public void errorFournisseurNonIdentifiable(FlowType flowType, String reference,
-                                                  String nomFournisseur, String pennylaneId, String siret) {
+                                                String nomFournisseur, String pennylaneId, String siret) {
         log.error("[{}] [{}] Fournisseur non identifiable: \"{}\" (ID: {}, SIRET: {})",
-            flowType.getCode(), reference, nomFournisseur, pennylaneId, siret);
+                flowType.getCode(), reference, nomFournisseur, pennylaneId, siret);
         markActivity();
         incrementError();
     }
 
     public void errorApiPennylane(FlowType flowType, String reference, int codeHttp, String messageApi) {
         log.error("[{}] [{}] Erreur API Pennylane: HTTP {} - {}",
-            flowType.getCode(), reference, codeHttp, messageApi);
+                flowType.getCode(), reference, codeHttp, messageApi);
         markActivity();
         incrementError();
     }
 
     public void errorConnexion(FlowType flowType, String typeErreur, int tentative, int maxTentatives) {
         log.error("[{}] Erreur connexion API: {} (tentative {}/{})",
-            flowType.getCode(), typeErreur, tentative, maxTentatives);
+                flowType.getCode(), typeErreur, tentative, maxTentatives);
     }
 
     // ═══════════════════════════════════════════════════════════════════════

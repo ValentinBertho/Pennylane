@@ -93,6 +93,10 @@ public class schedulerPurchases {
         for (SiteEntity site : sites) {
             // Récupération catégories
             List<Category> categories = categoryCacheService.getCategories(site);
+            if (CollectionUtils.isEmpty(categories)) {
+                log.warn("[SYNC-ACHATS] Site {} : aucune catégorie récupérée, site ignoré", site.getCode());
+                continue;
+            }
 
             List<Long> categoryIds = categories.stream()
                     .filter(c -> categoriesAFiltrer.contains(c.getLabel()))
@@ -101,18 +105,25 @@ public class schedulerPurchases {
                     .toList();
 
             if (categoriesAFiltrer.size() != categoryIds.size()) {
-                log.warn("[SYNC-ACHATS] Incohérence catégories pour le site {} (configurées: {}, trouvées: {}), tâche arrêtée",
-                        site.getCode(), categoriesAFiltrer.size(), categoryIds.size());
+                List<String> categoriesTrouvees = categories.stream()
+                        .filter(c -> categoryIds.contains(c.getId()))
+                        .map(Category::getLabel)
+                        .toList();
+                List<String> categoriesManquantes = categoriesAFiltrer.stream()
+                        .filter(configured -> !categoriesTrouvees.contains(configured))
+                        .toList();
 
-                flowLogger.endFlow(correlationId, Map.of(
-                    "Statut", "INTERROMPU",
-                    "Raison", "Incohérence des catégories"
-                ));
-                return;
+                log.warn("[SYNC-ACHATS] Incohérence catégories pour le site {} (configurées: {}, trouvées: {}, manquantes: {}), site ignoré",
+                        site.getCode(), categoriesAFiltrer.size(), categoryIds.size(), categoriesManquantes);
+                continue;
             }
 
             // Récupération factures
             List<SupplierInvoiceResponse.SupplierInvoiceItem> items = invoiceApi.listAllSupplierInvoices(site, categoryIds, syncDateTime);
+            if (items == null) {
+                log.warn("[SYNC-ACHATS] Site {} : récupération des factures impossible (retour API null)", site.getCode());
+                continue;
+            }
             totalFacturesRecuperees.addAndGet(items.size());
 
             // Filtrage factures
@@ -158,9 +169,9 @@ public class schedulerPurchases {
         }
 
         flowLogger.endSyncAchats(correlationId,
-            totalFacturesRecuperees.get(), totalFacturesRetenues.get(),
-            facturesImportees.get(), facturesIgnorees.get(),
-            fournisseursCrees.get(), documentsTelechargees.get());
+                totalFacturesRecuperees.get(), totalFacturesRetenues.get(),
+                facturesImportees.get(), facturesIgnorees.get(),
+                fournisseursCrees.get(), documentsTelechargees.get());
     }
 
     @Scheduled(cron = "${cron.PurchasesV2}")
@@ -173,9 +184,9 @@ public class schedulerPurchases {
         List<String> categoriesAFiltrer = config.getCategoriesAFiltrer();
 
         String correlationId = flowLogger.startFlow(FlowType.SYNC_ACHATS_V2,
-            Map.of("Période", daysBackward + " jours",
-                   "Statuts", statusAFiltrer.toString(),
-                   "Catégories", categoriesAFiltrer.toString()));
+                Map.of("Période", daysBackward + " jours",
+                        "Statuts", statusAFiltrer.toString(),
+                        "Catégories", categoriesAFiltrer.toString()));
 
         OffsetDateTime syncDateTime = LocalDate.now()
                 .minusDays(daysBackward)
@@ -190,12 +201,29 @@ public class schedulerPurchases {
         for (SiteEntity site : sites) {
             try {
                 List<Category> categories = invoiceApi.listAllCategories(site);
+                if (CollectionUtils.isEmpty(categories)) {
+                    log.warn("[SYNC-ACHATS-V2] Site {} : aucune catégorie récupérée, site ignoré", site.getCode());
+                    continue;
+                }
 
                 List<Long> categoryIds = categories.stream()
                         .filter(c -> categoriesAFiltrer.contains(c.getLabel()))
                         .map(Category::getId)
                         .filter(Objects::nonNull)
                         .toList();
+
+                if (categoriesAFiltrer.size() != categoryIds.size()) {
+                    List<String> categoriesTrouvees = categories.stream()
+                            .filter(c -> categoryIds.contains(c.getId()))
+                            .map(Category::getLabel)
+                            .toList();
+                    List<String> categoriesManquantes = categoriesAFiltrer.stream()
+                            .filter(configured -> !categoriesTrouvees.contains(configured))
+                            .toList();
+                    log.warn("[SYNC-ACHATS-V2] Incohérence catégories pour le site {} (manquantes: {}), site ignoré",
+                            site.getCode(), categoriesManquantes);
+                    continue;
+                }
 
                 List<ChangelogResponse.ChangelogItem> changelogs = invoiceApi.listAllSupplierInvoiceChangelogs(site, syncDateTime);
 
@@ -287,18 +315,18 @@ public class schedulerPurchases {
                         case "FULLY_PAID" -> {
                             facturesPayees.incrementAndGet();
                             flowLogger.logStatutPaiement(FlowType.SYNC_REGLEMENTS, aFacture,
-                                "ENTIÈREMENT PAYÉE", result.getMontantPaye(), result.getMontantTotal());
+                                    "ENTIÈREMENT PAYÉE", result.getMontantPaye(), result.getMontantTotal());
                         }
                         case "PARTIALLY_PAID" -> {
                             facturesPartielles.incrementAndGet();
                             flowLogger.logStatutPaiement(FlowType.SYNC_REGLEMENTS, aFacture,
-                                "PARTIELLEMENT PAYÉE", result.getMontantPaye(), result.getMontantTotal());
+                                    "PARTIELLEMENT PAYÉE", result.getMontantPaye(), result.getMontantTotal());
                         }
                         case "OVERPAID" -> {
                             surpaiements.incrementAndGet();
                             flowLogger.warnSurpaiement(FlowType.SYNC_REGLEMENTS, aFacture,
-                                result.getMontantTotal(), result.getMontantPaye(),
-                                result.getMontantPaye() - result.getMontantTotal());
+                                    result.getMontantTotal(), result.getMontantPaye(),
+                                    result.getMontantPaye() - result.getMontantTotal());
                         }
                         default -> log.debug("[SYNC-REGLEMENTS] [{}] Statut: {}", aFacture, result.getStatut());
                     }
@@ -335,7 +363,7 @@ public class schedulerPurchases {
         if (CollectionUtils.isEmpty(sites)) return;
 
         String correlationId = flowLogger.startFlow(FlowType.SYNC_REGLEMENTS_V2,
-            Map.of("Sites", sites.size()));
+                Map.of("Sites", sites.size()));
 
         AtomicInteger reglementsTraites = new AtomicInteger(0);
         AtomicInteger reglementsEnErreur = new AtomicInteger(0);

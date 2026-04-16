@@ -488,35 +488,40 @@ public class AccountingService {
             return null;
         }
 
+        String sanitizedCompte = removeTrailingZerosString(compteGeneral);
+
         Optional<Item> existingItem = comptes.stream()
                 .filter(item -> item != null && item.getNumber() != null)
                 .filter(item -> Objects.equals(
                         removeTrailingZerosString(item.getNumber()),
-                        removeTrailingZerosString(String.valueOf(compteGeneral))
+                        removeTrailingZerosString(String.valueOf(sanitizedCompte))
                 ))
                 .findFirst();
 
         if (existingItem.isEmpty()) {
-            Item remoteExistingItem = accountsApi.getLedgerAccountByNumber(compteGeneral, site);
+            Item remoteExistingItem = accountsApi.getLedgerAccountByNumber(sanitizedCompte, site);
             if (remoteExistingItem != null) {
-                log.info("Compte déjà présent dans Pennylane, réutilisation du compte {}.", compteGeneral);
+                log.info("Compte déjà présent dans Pennylane, réutilisation du compte {}.", sanitizedCompte);
                 comptes.add(remoteExistingItem);
                 return remoteExistingItem;
             }
 
             Item newItem = new Item();
-            newItem.setNumber(compteGeneral);
+            newItem.setNumber(sanitizedCompte);
             newItem.setLabel(raisonSociale != null ? raisonSociale : "Auto interface Pennylane");
             try {
+
+
+
                 Item createdItem = accountsApi.createLedgerAccount(newItem, site);
                 if (createdItem == null) {
-                    Item fallbackItem = accountsApi.getLedgerAccountByNumber(compteGeneral, site);
+                    Item fallbackItem = accountsApi.getLedgerAccountByNumber(sanitizedCompte, site);
                     if (fallbackItem != null) {
-                        log.info("Compte récupéré après tentative de création: {}.", compteGeneral);
+                        log.info("Compte récupéré après tentative de création: {}.", sanitizedCompte);
                         comptes.add(fallbackItem);
                         return fallbackItem;
                     }
-                    log.error("Impossible de créer ou récupérer le compte {} dans Pennylane.", compteGeneral);
+                    log.error("Impossible de créer ou récupérer le compte {} dans Pennylane.", sanitizedCompte);
                     return null;
                 }
                 // FIXME: Remplacer ce sleep par un mécanisme de retry/backoff approprié

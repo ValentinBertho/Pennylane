@@ -1,10 +1,12 @@
 package fr.mismo.pennylane.api;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.mismo.pennylane.dao.entity.SiteEntity;
 import fr.mismo.pennylane.dto.Category;
 import fr.mismo.pennylane.dto.CategoryListResponse;
 import fr.mismo.pennylane.dto.invoice.*;
+import fr.mismo.pennylane.util.ApiRetryHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,6 +33,9 @@ public class InvoiceApi {
     @Value("${api.url_v1}")
     private String apiUrl;
 
+    @Value("${api.url_v2}")
+    private String apiUrlV2;
+
     @Autowired
     public InvoiceApi(RestTemplate restTemplate, ObjectMapper objectMapper) {
         this.restTemplate = restTemplate;
@@ -42,9 +47,16 @@ public class InvoiceApi {
 
         InvoiceResponse exist = null;
 
-        // Vérification si la facture existe déjà, uniquement si withVerif est true ET que l'ID est présent
-        if (withVerif && invoice.getId() != null) {
-            exist = checkInvoiceExists(site, String.valueOf(invoice.getId()));
+        // Vérification préventive pour éviter les POST inutiles (et 422 duplicate external_reference)
+        if (Boolean.TRUE.equals(withVerif)) {
+            if (invoice.getId() != null) {
+                exist = checkInvoiceExists(site, String.valueOf(invoice.getId()));
+            }
+
+            // Fallback si l'ID Pennylane n'est pas renseigné/exploitable localement : vérification par external_reference
+            if (exist == null) {
+                exist = findCustomerInvoiceByExternalReference(site, invoice.getExternalReference());
+            }
 
             if (exist != null) {
                 String errorMessage = String.format("La facture avec le numéro %s existe déjà.", invoice.getInvoiceNumber());
@@ -54,9 +66,9 @@ public class InvoiceApi {
                 exist.setResponseMessage(errorMessage);
                 return exist;
             }
-            else{
-                invoice.setId(null);
-            }
+
+            // Si non trouvée, on continue vers la création
+            invoice.setId(null);
         }
 
         HttpHeaders headers = new HttpHeaders();
@@ -79,6 +91,17 @@ public class InvoiceApi {
         } catch (HttpClientErrorException e) {
             // Gestion du 422 ou autres 4xx
             log.warn("Erreur HTTP lors de la création de la facture : {}", e.getStatusCode());
+
+            if (e.getStatusCode() == HttpStatus.UNPROCESSABLE_ENTITY
+                    && e.getResponseBodyAsString() != null
+                    && e.getResponseBodyAsString().contains("External reference has already been taken")) {
+                InvoiceResponse existingInvoice = findCustomerInvoiceByExternalReference(site, invoice.getExternalReference());
+                if (existingInvoice != null && existingInvoice.getId() != null) {
+                    existingInvoice.setResponseStatus("ALREADY_EXISTS");
+                    existingInvoice.setResponseMessage("Facture déjà existante (external_reference)");
+                    return existingInvoice;
+                }
+            }
 
             InvoiceResponse errorResponse = new InvoiceResponse();
             errorResponse.setResponseStatus("FAILED");
@@ -264,35 +287,43 @@ public class InvoiceApi {
     }
 
     public List<Category> listAllCategories(SiteEntity site) {
-        String baseUrl = apiUrl + "categories";
+        String baseUrl = apiUrlV2 + "categories?limit={limit}";
         List<Category> allCategories = new ArrayList<>();
         String cursor = null;
         boolean hasMore = true;
 
         while (hasMore) {
-            String url = baseUrl;
-            if (cursor != null && !cursor.isEmpty()) {
-                url += "?cursor=" + cursor;
-            }
-
             try {
                 HttpHeaders headers = new HttpHeaders();
                 headers.set("accept", "application/json");
                 headers.set("Authorization", "Bearer " + site.getPennylaneToken());
 
                 HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
-                ResponseEntity<CategoryListResponse> response = restTemplate.exchange(
-                        url,
-                        HttpMethod.GET,
-                        requestEntity,
-                        CategoryListResponse.class
+
+                String url = baseUrl + (cursor != null && !cursor.isEmpty() ? "&cursor={cursor}" : "");
+                Map<String, Object> uriVariables = new HashMap<>();
+                uriVariables.put("limit", 100);
+                if (cursor != null && !cursor.isEmpty()) {
+                    uriVariables.put("cursor", cursor);
+                }
+
+                ResponseEntity<CategoryListResponse> response = ApiRetryHelper.executeWithRetry(
+                        () -> restTemplate.exchange(
+                                url,
+                                HttpMethod.GET,
+                                requestEntity,
+                                CategoryListResponse.class,
+                                uriVariables
+                        ),
+                        "listAllCategories"
                 );
 
-                Thread.sleep(1100); // Respect des limites de débit
+                Thread.sleep(600);
 
                 CategoryListResponse body = response.getBody();
-                if (body == null) break;
-                if (body.getItems() == null) break;
+                if (body == null || body.getItems() == null) {
+                    break;
+                }
 
                 allCategories.addAll(body.getItems());
                 hasMore = body.isHas_more();
@@ -306,6 +337,48 @@ public class InvoiceApi {
         return allCategories;
     }
 
+
+    public InvoiceResponse findCustomerInvoiceByExternalReference(SiteEntity site, String externalReference) {
+        if (externalReference == null || externalReference.isBlank()) {
+            return null;
+        }
+
+        String filterJson = String.format("[{\"field\": \"external_reference\", \"operator\": \"eq\", \"value\": \"%s\"}]",
+                externalReference.replace("\"", ""));
+        String url = apiUrl + "customer_invoices?limit={limit}&sort={sort}&filter={filter}";
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("accept", "application/json");
+            headers.set("Authorization", "Bearer " + site.getPennylaneToken());
+
+            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    requestEntity,
+                    String.class,
+                    Map.of("limit", 1, "sort", "-id", "filter", filterJson)
+            );
+
+            String body = response.getBody();
+            if (body == null || body.isBlank()) {
+                return null;
+            }
+
+            JsonNode root = objectMapper.readTree(body);
+            JsonNode items = root.path("items");
+            if (!items.isArray() || items.isEmpty()) {
+                return null;
+            }
+
+            return objectMapper.treeToValue(items.get(0), InvoiceResponse.class);
+        } catch (Exception e) {
+            log.warn("Impossible de retrouver une facture par external_reference={} : {}", externalReference, e.getMessage());
+            return null;
+        }
+    }
 
     public InvoiceResponse checkInvoiceExists(SiteEntity site, String invoiceId) {
         try {

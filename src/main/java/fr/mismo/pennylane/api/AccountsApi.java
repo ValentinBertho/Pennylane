@@ -43,11 +43,11 @@ public class AccountsApi {
 
     public List<Item> listAllLedgerAccounts(SiteEntity site) {
         List<Item> allLedgerAccounts = new ArrayList<>();
-        int currentPage = 1;
-        int totalPages;
+        String cursor = null;
 
         do {
-            String url = apiUrlV2 + "ledger_accounts?page=" + currentPage + "&per_page=1000";
+            String url = apiUrlV2 + "ledger_accounts?limit=1000"
+                    + (cursor != null ? "&cursor=" + cursor : "");
             try {
                 ResponseEntity<AccountingResponse> response = restTemplate.exchange(
                         url,
@@ -59,19 +59,17 @@ public class AccountsApi {
                 AccountingResponse apiResponse = response.getBody();
                 if (apiResponse != null && apiResponse.getItems() != null) {
                     allLedgerAccounts.addAll(apiResponse.getItems());
-                    totalPages = apiResponse.getTotalPages();
-                    currentPage++;
+                    cursor = apiResponse.getNextCursor(); // null si dernière page
                 } else {
                     break;
                 }
 
-                // Pause pour respecter la limite de 2 requêtes par seconde
                 Thread.sleep(600);
             } catch (Exception e) {
                 handleException("listAllLedgerAccounts", url, e);
                 break;
             }
-        } while (currentPage <= totalPages);
+        } while (cursor != null);
 
         return allLedgerAccounts;
     }

@@ -20,6 +20,9 @@ public class AccountingResponse {
     @JsonProperty("per_page")
     private int perPage;
 
+    @JsonProperty("next_cursor")
+    private String nextCursor;
+
     @JsonProperty("items")
     private List<Item> items;
 }

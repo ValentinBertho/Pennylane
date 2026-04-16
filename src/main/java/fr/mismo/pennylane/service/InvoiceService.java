@@ -43,6 +43,9 @@ public class InvoiceService {
     SupplierApi supplierApi;
 
     @Autowired
+    SupplierCacheService supplierCacheService;
+
+    @Autowired
     InvoiceApi invoiceApi;
 
     @Autowired
@@ -120,17 +123,6 @@ public class InvoiceService {
             String codDirection = null;
             String codAgence = null;
 
-            if (invoice.getCategories() != null) {
-                try {
-                    CategoryResponse category = accountsApi.getCategoryByUrl(invoice.getCategories().getUrl(), site);
-                    codDirection = null; // TODO à implémenter si besoin
-                    codAgence = category != null ? category.getLabel() : null;
-                } catch (Exception e) {
-                    log.warn("Erreur lors de la récupération de la catégorie pour la facture ID: {}", invoiceId);
-                    logHelper.warn(traitement, "Erreur récupération catégorie pour facture ID: " + invoiceId);
-                }
-            }
-
             String codEtat = Optional.ofNullable(invoice.getPaymentStatus()).orElse("");
             String totalHT = Optional.of(invoice.getCurrencyAmountBeforeTax().toString()).orElse("0");
             String totalTTC = Optional.of(invoice.getCurrencyAmount().toString()).orElse("0");
@@ -153,7 +145,15 @@ public class InvoiceService {
                 return result;
             }
 
-            Supplier supplier = supplierApi.retrieveSupplier(String.valueOf(invoice.getSupplier().getId()), site);
+            Supplier supplier;
+            try {
+                supplier = supplierCacheService.getSupplier(String.valueOf(invoice.getSupplier().getId()), site);
+            } catch (Exception e) {
+                log.error("[SYNC-ACHATS] [{}] ✗ Erreur récupération fournisseur: {}", invoiceId, e.getMessage());
+                logHelper.error(traitement, "Erreur récupération fournisseur facture ID: " + invoiceId, e);
+                processError(invoice, e);
+                return result;
+            }
 
             if (supplier == null) {
                 String errMsg = "Le fournisseur est null pour la facture ID: " + invoiceId;
@@ -164,29 +164,11 @@ public class InvoiceService {
             }
 
             String nomSociete = Optional.ofNullable(supplier.getName()).orElse("");
-            String supplierSourceId = Optional.of(supplier.getId().toString()).orElse("");
 
             log.debug("Informations fournisseur - InvoiceNumber: {}, Devise: {}, Nom: {}", invoiceNumber, devise, nomSociete);
             logHelper.info(traitement, String.format("Informations fournisseur - InvoiceNumber: %s, Devise: %s, Nom: %s", invoiceNumber, devise, nomSociete));
 
-            Supplier aSupplier;
-            try {
-                aSupplier = supplierApi.retrieveSupplier(supplierSourceId, site);
-                if (aSupplier == null) {
-                    String errMsg = "Impossible de récupérer les informations du fournisseur pour la facture ID: " + invoiceId;
-                    log.error(errMsg);
-                    logHelper.error(traitement, errMsg, new NullPointerException("SupplierWrapper ou Supplier est null"));
-                    processError(invoice, new NullPointerException("SupplierWrapper ou Supplier est null"));
-                    return result;
-                }
-            } catch (Exception e) {
-                log.error("[SYNC-ACHATS] [{}] ✗ Erreur récupération fournisseur: {}", invoiceId, e.getMessage());
-                logHelper.error(traitement, "Erreur récupération fournisseur facture ID: " + invoiceId, e);
-                processError(invoice, e);
-                return result;
-            }
-
-            if (aSupplier.getLedgerAccount() == null) {
+            if (supplier.getLedgerAccount() == null) {
                 String errMsg = "LedgerAccount est null pour le fournisseur de la facture ID: " + invoiceId;
                 log.error("[SYNC-ACHATS] [{}] ✗ {}", invoiceId, errMsg);
                 logHelper.error(traitement, errMsg, new NullPointerException("LedgerAccount est null"));
@@ -194,11 +176,11 @@ public class InvoiceService {
                 return result;
             }
 
-            Item ledger = accountsApi.getLedgerAccountById(aSupplier.getLedgerAccount().getId().toString(),site);
+            Item ledger = accountsApi.getLedgerAccountById(supplier.getLedgerAccount().getId().toString(), site);
 
             String noPlanItem = Optional.ofNullable(ledger.getNumber()).orElse("");
-            String idPennylaneFourn = Optional.of(aSupplier.getId().toString()).orElse("");
-            String idPennylaneFournV2 = Optional.of(aSupplier.getId().toString()).orElse("");
+            String idPennylaneFourn = Optional.of(supplier.getId().toString()).orElse("");
+            String idPennylaneFournV2 = Optional.of(supplier.getId().toString()).orElse("");
 
             log.debug("Détails fournisseur - NoPlanItem: {}, ID Pennylane: {}, ID Pennylane V2: {}", noPlanItem, idPennylaneFourn, idPennylaneFournV2);
             logHelper.info(traitement, String.format("Détails fournisseur - NoPlanItem: %s, ID Pennylane: %s, ID Pennylane V2: %s", noPlanItem, idPennylaneFourn, idPennylaneFournV2));
@@ -223,6 +205,7 @@ public class InvoiceService {
                     try {
                         CategoryResponse category = accountsApi.getCategoryByUrl(invoice.getCategories().getUrl(), site);
                         if (category != null) {
+                            codAgence = category.getLabel();
                             categoryDetails = String.format("ID: %s, Label: %s",
                                     category.getId() != null ? category.getId().toString() : "N/A",
                                     category.getLabel() != null ? category.getLabel() : "N/A");

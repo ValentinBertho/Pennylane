@@ -37,16 +37,15 @@ public class ProductApi {
     }
 
     public Product createProduct(Product product, SiteEntity site) {
-        // Utilisation de l'API v2 : POST /api/external/v2/products
-        String url = apiUrlV2 + "products";
+        String url = apiUrl + "products";
 
         product.setId(null);
         try {
-            HttpHeaders headers = headerBuilder(site.getPennylaneToken());
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("accept", "application/json");
+            headers.set("content-type", "application/json");
 
-            // L'API v2 attend le body directement sans wrapper (pas de {"product": {...}})
-            HttpEntity<Product> requestEntity = new HttpEntity<>(product, headers);
+            HttpEntity<Product> requestEntity = new HttpEntity<>(product, headerBuilder(site.getPennylaneToken()));
 
             ResponseEntity<Product> response = restTemplate.exchange(
                     url,
@@ -55,8 +54,8 @@ public class ProductApi {
                     Product.class
             );
 
-            // Pause pour respecter la limite de 4 requêtes par seconde (API v2)
-            Thread.sleep(300);
+            // Pause pour respecter la limite de 2 requêtes par seconde
+            Thread.sleep(600);
 
             Product apiResponse = response.getBody();
             return apiResponse != null ? apiResponse : null;
@@ -113,8 +112,7 @@ public class ProductApi {
     }
 
     public Product retrieveProduct(String productId, SiteEntity site) {
-        // Utilisation de l'API v2 : GET /api/external/v2/products/{id}
-        String url = apiUrlV2 + "products/" + productId;
+        String url = apiUrl + "products/" + productId;
 
         try {
             ResponseEntity<Product> response = restTemplate.exchange(
@@ -124,8 +122,8 @@ public class ProductApi {
                     Product.class
             );
 
-            // Pause pour respecter la limite de 4 requêtes par seconde (API v2)
-            Thread.sleep(300);
+            // Pause pour respecter la limite de 2 requêtes par seconde
+            Thread.sleep(600);
 
             Product apiResponse = response.getBody();
             return apiResponse != null ? apiResponse : null;
@@ -142,15 +140,14 @@ public class ProductApi {
     }
 
     public Product updateProduct(Product product, SiteEntity site) {
-        // Utilisation de l'API v2 : PUT /api/external/v2/products/{id}
-        String url = apiUrlV2 + "products/" + product.getId();
+        String url = apiUrl + "products/" + product.getId();
         product.setId(null);
         try {
-            HttpHeaders headers = headerBuilder(site.getPennylaneToken());
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("accept", "application/json");
+            headers.set("content-type", "application/json");
 
-            // L'API v2 attend le body directement sans wrapper
-            HttpEntity<Product> requestEntity = new HttpEntity<>(product, headers);
+            HttpEntity<Product> requestEntity = new HttpEntity<>(product, headerBuilder(site.getPennylaneToken()));
 
             ResponseEntity<Product> response = restTemplate.exchange(
                     url,
@@ -159,8 +156,8 @@ public class ProductApi {
                     Product.class
             );
 
-            // Pause pour respecter la limite de 4 requêtes par seconde (API v2)
-            Thread.sleep(300);
+            // Pause pour respecter la limite de 2 requêtes par seconde
+            Thread.sleep(600);
 
             Product apiResponse = response.getBody();
             return apiResponse != null ? apiResponse : null;

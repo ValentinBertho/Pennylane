@@ -125,9 +125,9 @@ public class schedulerAccounting {
         });
 
         flowLogger.endSyncEcritures(correlationId, lotsTraites.get(), totalLots.get(),
-            facturesCrees.get(), facturesIgnorees.get(),
-            clientsCrees.get(), produitsCrees.get(),
-            documentsUploades.get(), erreurs);
+                facturesCrees.get(), facturesIgnorees.get(),
+                clientsCrees.get(), produitsCrees.get(),
+                documentsUploades.get(), erreurs);
     }
 
     /**
