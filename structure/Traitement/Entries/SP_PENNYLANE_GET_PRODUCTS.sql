@@ -19,6 +19,8 @@ Description :
 
 Historique des mises à jour :
 > v001 - VABE - 14/06/2024 - Création
+> v002 - VABE - 08/01/2026 - Récupération du code taxe sur CODE_CPTE_TAXE_PENNYLANE
+
 //////////////////////////////////////////////////////////////////////// */
 
 CREATE PROCEDURE [SP_PENNYLANE_GET_PRODUCTS]
@@ -39,7 +41,7 @@ BEGIN
             COALESCE(P.COD_PROD, '') AS "reference",  -- Remplace null par une chaîne vide
             COALESCE(P.DES_COM, '') AS "label",  -- Remplace null par une chaîne vide
             COALESCE(P.DES_TEC, '') AS "description",  -- Remplace null par une chaîne vide
-            COALESCE(TAX.CODE_CPTE_TAXE, 'FR_200') AS "vatRate",  -- Remplace null par une chaîne vide
+            COALESCE(TAX.CODE_CPTE_TAXE_PENNYLANE, 'FR_200') AS "vatRate",  -- Remplace null par une chaîne vide
             -- COALESCE(P.COD_TAXE1, 'FR_200') AS "vatRate",  -- Remplace null par une chaîne vide
             COALESCE(
                 CASE

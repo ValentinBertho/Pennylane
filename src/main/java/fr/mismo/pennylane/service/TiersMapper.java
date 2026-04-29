@@ -57,7 +57,7 @@ public class TiersMapper {
             Item ledger = accountsApi.getLedgerAccountByNumber(sanitizeAccountNumber(targetNumber), site);
 
             LedgerAccount ledgerAccount = new LedgerAccount();
-            ledgerAccount.setId(Long.valueOf(ledger.getId()));
+            ledgerAccount.setNumber(ledger.getNumber());
             customer.setLedgerAccount(ledgerAccount);
 
             return customer;

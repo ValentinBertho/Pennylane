@@ -79,7 +79,7 @@ BEGIN
         LF.NO_PRODUIT AS noProduit,        -- Numéro du produit
         PROD.PENNYLANE_ID AS idProduit,        -- Id du produit
         LF.DES_COM AS desCom,           -- Description du produit ou service
-		TAX.CODE_CPTE_TAXE AS codTaxe,  -- Description du produit ou service
+		TAX.CODE_CPTE_TAXE_PENNYLANE AS codTaxe,  -- Description du produit ou service
 		TAX.TAUX AS tauxTaxe,
 		-- 1 AS qteFac,                    -- VERRUE pour correctif
         LF.QTE_FAC AS qteFac,           -- Quantité facturée

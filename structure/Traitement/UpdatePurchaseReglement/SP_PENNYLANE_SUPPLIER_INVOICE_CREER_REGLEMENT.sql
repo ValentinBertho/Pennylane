@@ -7,140 +7,200 @@ GO
 SET ANSI_NULLS ON
 GO
 
-CREATE PROCEDURE [SP_PENNYLANE_SUPPLIER_INVOICE_CREER_REGLEMENT]
+/* ////////////////////////////////////////////////////////////////////////
+
+Nom de la procédure stockée : SP_PENNYLANE_SUPPLIER_INVOICE_CREER
+
+No Version : 001
+
+Description :
+
+Procédure utilisée pour insérer une nouvelle facture fournisseur dans la table A_FACTURE
+depuis les informations fournies par l'interface Pennylane.
+
+Historique des mises à jour :
+
+> v001 - VABE - 16/01/2025 - Création
+> v002 - VABE - 20/03/2025 - Adaptation / corrections + ajout cartouche SPE
+
+//////////////////////////////////////////////////////////////////////// */
+
+ALTER PROCEDURE [dbo].[SP_PENNYLANE_SUPPLIER_INVOICE_CREER]
+    @NO_SOCIETE VARCHAR(50),
+    @ID_PENNYLANE_FOURN varchar(MAX),
+    @ID_PENNYLANE_FOURN_V2 varchar(MAX),
     @INVOICE_ID VARCHAR(50),
-    @TRANSACTION_ID BIGINT = NULL,
-    @MONTANT DECIMAL(18, 2),
-    @DATE_REGLEMENT VARCHAR(50),
-    @RESULT_OUTPUT INT OUTPUT
+    @INVOICE_ID_V2 VARCHAR(50),
+    @OBJET NVARCHAR(255),
+    @DATE_FACTURE DATE,
+    @COD_SITE VARCHAR(50),
+    @COD_DIRECTION VARCHAR(50),
+    @COD_AGENCE VARCHAR(50),
+    @COD_ETAT VARCHAR(50),
+    @TOTAL_HT VARCHAR(50),
+    @TOTAL_TTC VARCHAR(50),
+    @TOTAL_TVA VARCHAR(50),
+    @INVOICE_NUMBER VARCHAR(50),
+    @DEVISE VARCHAR(50),
+    @NOM_SOCIETE VARCHAR(50),
+    @IMPORT_MESSAGE VARCHAR(MAX),
+    @RESULT_OUTPUT INT OUTPUT  -- Paramètre pour renvoyer le résultat
+
 AS
+IF exists (select * from sysobjects
+where id = object_id(N'[spe_SP_PENNYLANE_SUPPLIER_INVOICE_CREER]')
+and OBJECTPROPERTY(id, N'IsProcedure') = 1)
 BEGIN
-    SET NOCOUNT ON;
+EXEC spe_SP_PENNYLANE_SUPPLIER_INVOICE_CREER
+        @NO_SOCIETE,
+        @ID_PENNYLANE_FOURN,
+        @ID_PENNYLANE_FOURN_V2,
+        @INVOICE_ID,
+        @INVOICE_ID_V2,
+        @OBJET,
+        @DATE_FACTURE,
+        @COD_SITE,
+        @COD_DIRECTION,
+        @COD_AGENCE,
+        @COD_ETAT,
+        @TOTAL_HT,
+        @TOTAL_TTC,
+        @TOTAL_TVA,
+        @INVOICE_NUMBER,
+        @DEVISE,
+        @NOM_SOCIETE,
+        @RESULT_OUTPUT OUTPUT;
+END
+ELSE
+BEGIN
+SET NOCOUNT ON;
+
+    DECLARE @NO_A_FACTURE INT;
+    DECLARE @COD_COM VARCHAR(50);
+    DECLARE @COD_SERVICE VARCHAR(50);
+    DECLARE @_COD_DIRECTION VARCHAR(50);
+    DECLARE @_COD_AGENCE VARCHAR(50);
+    DECLARE @COD_TYPE VARCHAR(50);
+    DECLARE @_COD_ETAT VARCHAR(50);
+    DECLARE @_COD_STATUT VARCHAR(50);
+    DECLARE @_NO_INTERLO VARCHAR(50);
+	DECLARE @_NO_SOCIETE INT;
+	DECLARE @_COD_RGLT_FOUR VARCHAR(50);
+	DECLARE @_NO_TIERS_PAYE INT;
+	DECLARE @COD_TYPE_A_PIECE CHAR(10);
+
+
+    SET @NO_A_FACTURE = -1;
+
     BEGIN TRY
-        DECLARE @NO_V_FACTURE INT;
-        DECLARE @ID_ECHEANCE INT;
-        DECLARE @COD_DEVISE VARCHAR(10);
-        DECLARE @NO_REGLEMENT INT;
-        DECLARE @DATE_RGLT DATETIME;
-        DECLARE @DATE_RGLT_FRANCAISE VARCHAR(10);
-        DECLARE @SOLDE_REGLEMENT DECIMAL(18,2);
-        DECLARE @MONTANT_RESTANT DECIMAL(18,2);
+        -- Générez un nouveau numéro de facture
+        EXEC sp_COMPTEUR 'NO_A_FACTURE', @NO_A_FACTURE OUTPUT;
 
-        -- Nettoyage et conversion de la date
-        BEGIN TRY
-            SET @DATE_RGLT = CONVERT(DATETIME, LEFT(REPLACE(@DATE_REGLEMENT, 'Z', ''), 19), 120);
-        END TRY
-        BEGIN CATCH
-            SET @DATE_RGLT = GETDATE();
-        END CATCH
-        SET @DATE_RGLT_FRANCAISE = CONVERT(VARCHAR(10), @DATE_RGLT, 103);
+        -- Récupérer les valeurs ou leurs valeurs par défaut si elles sont NULL
+        SET @COD_COM = ISNULL(dbo.fn_PENNYLANE_COD_COM(), (SELECT DEFAULT_VALUE FROM PENNYLANE_DEFAULT_VALUES WHERE CODE = 'COD_COM'));
+        SET @COD_SERVICE = ISNULL(dbo.fn_PENNYLANE_COD_SERVICE(), (SELECT DEFAULT_VALUE FROM PENNYLANE_DEFAULT_VALUES WHERE CODE = 'COD_SERVICE'));
+        SET @_COD_DIRECTION = ISNULL(@COD_DIRECTION, (SELECT DEFAULT_VALUE FROM PENNYLANE_DEFAULT_VALUES WHERE CODE = 'COD_DIRECTION'));
+        SET @_COD_AGENCE = ISNULL(@COD_AGENCE, (SELECT DEFAULT_VALUE FROM PENNYLANE_DEFAULT_VALUES WHERE CODE = 'COD_AGENCE'));
+        SET @COD_TYPE = ISNULL(dbo.fn_PENNYLANE_COD_TYPE(), (SELECT DEFAULT_VALUE FROM PENNYLANE_DEFAULT_VALUES WHERE CODE = 'COD_TYPE'));
+        SET @_COD_ETAT = ISNULL(@COD_ETAT, (SELECT DEFAULT_VALUE FROM PENNYLANE_DEFAULT_VALUES WHERE CODE = 'COD_ETAT'));
+        SET @_COD_STATUT = (SELECT DEFAULT_VALUE FROM PENNYLANE_DEFAULT_VALUES WHERE CODE = 'COD_STATUT');
+        SET @_NO_INTERLO = (SELECT DEFAULT_VALUE FROM PENNYLANE_DEFAULT_VALUES WHERE CODE = 'NO_INTERLO');
+		SET @_NO_SOCIETE = (SELECT TOP 1 NO_SOCIETE FROM SOCIETE WHERE CODE_CPTA_FOUR = @NO_SOCIETE);
+		SET @_COD_RGLT_FOUR = (SELECT TOP 1 COD_RGLT_FOUR FROM SOCIETE WHERE CODE_CPTA_FOUR = @NO_SOCIETE);
+		SET @_NO_TIERS_PAYE = (SELECT TOP 1 NO_PAYEUR_FOUR FROM SOCIETE WHERE CODE_CPTA_FOUR = @NO_SOCIETE);
+		SET @COD_TYPE_A_PIECE = CASE WHEN CAST(@TOTAL_TTC AS DECIMAL)<0 THEN '2' ELSE '1' END;
 
-        -- Récupération de la clé interne de la facture
-        SET @NO_V_FACTURE = (SELECT NO_V_FACTURE FROM V_FACTURE WHERE PENNYLANE_ID = @INVOICE_ID);
-        IF @NO_V_FACTURE IS NULL
-        BEGIN
-            SET @RESULT_OUTPUT = -2; -- Facture non trouvée
-            RETURN;
-        END
 
-        -- Vérification de l'existence d'une transaction déjà synchronisée
-        IF EXISTS (
-            SELECT 1 FROM REGLEMENT
-            WHERE ID_TRANSACTION_PENNYLANE = @TRANSACTION_ID
-              AND NO_V_FACTURE = @NO_V_FACTURE
+        -- Insérer une nouvelle facture dans A_FACTURE
+        INSERT INTO A_FACTURE (
+            NO_SOCIETE,
+			NO_TIERS_PAYE,
+            NO_A_FACTURE,
+            OBJET,
+            COD_COM,
+            DATE_FACTURE,
+            COD_SITE,
+            COD_DIRECTION,
+            COD_AGENCE,
+            COD_SERVICE,
+            COD_ETAT,
+            COD_STATUT,
+            COD_TYPE,
+            C1,
+            TOTALHT_CONTROLE,
+            TOTALTTC_CONTROLE,
+            TOTALTVA_CONTROLE,
+            CREER_LE,
+            CREER_PAR,
+            NO_SITE,
+            NO_INTERLO,
+            PENNYLANE_ID,
+            PENNYLANE_ID_V2,
+            PARITE,
+            COD_DEV_FOUR,
+            COD_RGLT,
+            M5,
+			COD_TYPE_A_PIECE
         )
-        BEGIN
-            SET @RESULT_OUTPUT = -3; -- Transaction déjà synchronisée
-            RETURN;
-        END
+        VALUES (
+            @_NO_SOCIETE,
+			@_NO_TIERS_PAYE,
+            @NO_A_FACTURE,
+            @OBJET,
+            @COD_COM,
+            @DATE_FACTURE,
+            @COD_SITE,
+            @_COD_DIRECTION,
+            @_COD_AGENCE,
+            @COD_SERVICE,
+            1,
+            @_COD_STATUT,
+            @COD_TYPE,
+			@INVOICE_NUMBER,
+            @TOTAL_HT,
+            @TOTAL_TTC,
+            @TOTAL_TVA,
+            GETDATE(),
+            'PENNYLANE',
+            '-1',
+            @_NO_INTERLO,
+            @INVOICE_ID,
+            @INVOICE_ID_V2,
+            1,
+            @DEVISE,
+            @_COD_RGLT_FOUR,
+            @IMPORT_MESSAGE,
+			@COD_TYPE_A_PIECE
+        );
 
-        -- Initialisation du montant restant à répartir
-        SET @MONTANT_RESTANT = @MONTANT;
+        -- Assigner la valeur générée au paramètre OUTPUT
+        SET @RESULT_OUTPUT = @NO_A_FACTURE;
 
-        -- Curseur sur les échéances non soldées, par ordre croissant
-        DECLARE echeances_cursor CURSOR LOCAL FOR
-            SELECT ECHEANCE.NO_ECHEANCE, V_FACTURE.COD_DEVISE,
-                   ISNULL(ECHEANCE.MTT_TTC, 0) - ISNULL(ECHEANCE.MTT_RGLT, 0) AS SOLDE
-            FROM ECHEANCE
-            INNER JOIN V_FACTURE ON V_FACTURE.NO_V_FACTURE = ECHEANCE.NO_V_FACTURE
-            WHERE V_FACTURE.NO_V_FACTURE = @NO_V_FACTURE
-              AND ISNULL(ECHEANCE.SOLDEE, 0) = 0
-            ORDER BY ECHEANCE.DATE_ECH ASC;
+        EXEC SP_PENNYLANE_SYNCHRO_MARQUAGE
+            @NO_ENTITE = @NO_A_FACTURE,
+            @ENTITE = 'A_FACTURE',
+            @INFO = 'CREATE',
+            @REF_EXT = @INVOICE_ID;
 
-        OPEN echeances_cursor;
-        FETCH NEXT FROM echeances_cursor INTO @ID_ECHEANCE, @COD_DEVISE, @SOLDE_REGLEMENT;
-
-        WHILE @@FETCH_STATUS = 0 AND @MONTANT_RESTANT > 0
-        BEGIN
-            DECLARE @MONTANT_A_REGLER DECIMAL(18,2);
-
-            -- On ne règle pas plus que le solde de l'échéance
-            SET @MONTANT_A_REGLER = CASE
-                WHEN @MONTANT_RESTANT < @SOLDE_REGLEMENT THEN @MONTANT_RESTANT
-                ELSE @SOLDE_REGLEMENT
-            END;
-
-            -- Tirage de compteur unique
-            EXEC sp_COMPTEUR 'NO_REGLEMENT', @NO_REGLEMENT OUT;
-
-            -- Enregistrement du règlement
-            INSERT INTO REGLEMENT(
-                NO_REGLEMENT,
-                NO_ECHEANCE,
-                NO_V_FACTURE,
-                COD_DEVISE,
-                CREER_LE,
-                CREER_PAR,
-                DATE_RGLT,
-                LIBELLE,
-                ROWGUID,
-                MTT_TTC,
-                MTT_TTC_CUR,
-                ID_TRANSACTION_PENNYLANE
-            )
-            VALUES(
-                @NO_REGLEMENT,
-                @ID_ECHEANCE,
-                @NO_V_FACTURE,
-                @COD_DEVISE,
-                GETDATE(),
-                'PENNYLANE',
-                @DATE_RGLT_FRANCAISE,
-                'Règlement automatique (PennyLane)',
-                NEWID(),
-                @MONTANT_A_REGLER,
-                @MONTANT_A_REGLER,
-                @TRANSACTION_ID
-            );
-
-            -- Mise à jour de l’échéance
-            EXEC SP_ECHEANCE_CALCULER @ID_ECHEANCE;
-
-            SET @MONTANT_RESTANT = @MONTANT_RESTANT - @MONTANT_A_REGLER;
-
-            FETCH NEXT FROM echeances_cursor INTO @ID_ECHEANCE, @COD_DEVISE, @SOLDE_REGLEMENT;
-        END
-
-        CLOSE echeances_cursor;
-        DEALLOCATE echeances_cursor;
-
-        SET @RESULT_OUTPUT = 1; -- Succès
     END TRY
     BEGIN CATCH
-        DECLARE @PARAMS_LOG NVARCHAR(MAX);
+    -- En cas d'erreur, renvoyer -1
+    SET @RESULT_OUTPUT = -1;
 
-        SET @PARAMS_LOG =
-            'INVOICE_ID=' + ISNULL(@INVOICE_ID, 'NULL') +
-            ', TRANSACTION_ID=' + ISNULL(CONVERT(VARCHAR, @TRANSACTION_ID), 'NULL') +
-            ', MONTANT=' + ISNULL(CONVERT(VARCHAR, @MONTANT), 'NULL') +
-            ', DATE_REGLEMENT=' + ISNULL(@DATE_REGLEMENT, 'NULL');
+    -- Format JSON des paramètres importants pour le diagnostic
+    DECLARE @PARAMS_JSON NVARCHAR(MAX) = CONCAT(
+        '{',
+        '"NO_SOCIETE":"', @NO_SOCIETE, '",',
+        '"INVOICE_ID":"', @INVOICE_ID, '",',
+        '"OBJET":"', REPLACE(ISNULL(@OBJET, ''), '"', '\"'), '"',
+        '}'
+    );
 
-        EXEC SP_INSERT_ERROR_LOG
-            @PROCEDURE_NAME = 'SP_PENNYLANE_SUPPLIER_INVOICE_CREER_REGLEMENT',
-            @PARAMETERS = @PARAMS_LOG;
-
-        SET @RESULT_OUTPUT = -99;
+    -- Journaliser l'erreur
+    EXEC dbo.SP_INSERT_ERROR_LOG
+        @PROCEDURE_NAME = 'SP_PENNYLANE_SUPPLIER_INVOICE_CREER',
+        @PARAMETERS = @PARAMS_JSON;
     END CATCH
-END
-GO
+END;
+
 

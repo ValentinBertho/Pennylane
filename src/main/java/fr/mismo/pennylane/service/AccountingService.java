@@ -204,12 +204,15 @@ public class AccountingService {
             // Traitement du client
             try {
                 String aCustomer = processCustomer(first, site, String.valueOf(first.getNoVFacture()), comptes);
-                wrapper.setCustomerId(aCustomer);
-                // Déterminer si le client a été créé ou existait déjà
-                // (On considère créé si le processCustomer a retourné un ID)
-                if (aCustomer != null) {
-                    flowLogger.logValidation(FlowType.SYNC_ECRITURES, factureRef, "Client", true);
+                if (aCustomer == null) {
+                    log.error("[SYNC-ECRITURES] [{}] ✗ Impossible de résoudre l'ID client", factureRef);
+                    logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(first.getNoVFacture()), "Impossible de résoudre l'ID client Pennylane.", 2);
+                    result.addErreur(factureRef + ": Client introuvable ou non créé");
+                    lotErr++;
+                    continue;
                 }
+                wrapper.setCustomerId(aCustomer);
+                flowLogger.logValidation(FlowType.SYNC_ECRITURES, factureRef, "Client", true);
             } catch (Exception e) {
                 log.error("[SYNC-ECRITURES] [{}] ✗ Erreur traitement client: {}", factureRef, e.getMessage());
                 logService.ajouterLigneForumSafe("V_FACTURE", String.valueOf(first.getNoVFacture()), "Erreur dans le processCustomer : " + e.getMessage(), 2);
@@ -346,6 +349,9 @@ public class AccountingService {
             log.info("Création de la société dans Pennylane");
 
             Customer create = customerApi.createCustomer(tiersMapper.mapToCustomer(tierToImport, site, noFacture), site);
+            if (create == null) {
+                throw new IllegalStateException("Échec de la création du client dans Pennylane pour la facture " + noFacture);
+            }
             customerId = String.valueOf(create.getId());
             logRepository.majSociete(tierToImport.getCompteComptable(), customerId, customerId, site.getCode());
         } else {
