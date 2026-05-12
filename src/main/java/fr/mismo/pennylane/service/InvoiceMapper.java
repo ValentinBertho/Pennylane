@@ -184,7 +184,18 @@ public class InvoiceMapper {
 
             // Récupération des valeurs de base
             Double montantHT = Optional.ofNullable(factureDTO.getTotalHT()).orElse(0.0);
-            Integer qte = Optional.ofNullable(factureDTO.getQteFac()).orElse(1);
+            Integer qte = Optional.ofNullable(factureDTO.getQteFac())
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .map(s -> {
+                        try {
+                            int val = Integer.parseInt(s);
+                            return val > 0 ? val : 1;
+                        } catch (NumberFormatException e) {
+                            return 1;
+                        }
+                    })
+                    .orElse(1);
 
             // Sécurisation de la quantité (évite division par zéro)
             if (qte == null || qte <= 0) {
@@ -267,9 +278,16 @@ public class InvoiceMapper {
                     .orElse("Ligne de facture");
             lineItem.setLabel(label);
 
-            // product_id (optionnel)
-            if (factureDTO.getIdProduit() != null && factureDTO.getIdProduit() > 0) {
-                lineItem.setProductId(factureDTO.getIdProduit());
+            // product_id (optionnel) - PENNYLANE_ID est VARCHAR en base, on parse en int
+            if (factureDTO.getIdProduit() != null && !factureDTO.getIdProduit().isBlank()) {
+                try {
+                    int productId = Integer.parseInt(factureDTO.getIdProduit().trim());
+                    if (productId > 0) {
+                        lineItem.setProductId((long) productId);
+                    }
+                } catch (NumberFormatException ignored) {
+                    // PENNYLANE_ID non numérique : produit pas encore synchronisé
+                }
             }
 
             // ledger_account_id (optionnel)

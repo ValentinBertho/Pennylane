@@ -23,7 +23,7 @@ public class ProductMapper {
                 throw new IllegalArgumentException("Le produit ne peut pas être null");
             }
 
-            Integer productId = product.getId();
+            Long productId = product.getId();
             String sourceId = productId != null ? String.valueOf(productId) : null;
 
             // Copie défensive pour éviter de modifier l'original si jamais il est réutilisé ailleurs
@@ -32,7 +32,7 @@ public class ProductMapper {
             // Mapping des champs avec gestion des null
             mappedProduct.setId(productId);
             mappedProduct.setExternalReference(product.getExternalReference());
-            mappedProduct.setId(sourceId != null ? Integer.valueOf(sourceId.trim()) : null);
+            mappedProduct.setId(sourceId != null ? Long.valueOf(sourceId.trim()) : null);
             mappedProduct.setVatRate(Optional.ofNullable(product.getVatRate()).map(String::trim).orElse(""));
             mappedProduct.setLabel(Optional.ofNullable(product.getLabel()).map(String::trim).orElse(""));
             mappedProduct.setDescription(Optional.ofNullable(product.getDescription()).map(String::trim).orElse(""));
@@ -67,7 +67,7 @@ public class ProductMapper {
             }
 
             // Préservation de l'ID original
-            Integer productId = existingProduct.getId();
+            Long productId = existingProduct.getId();
 
             // Application des nouvelles données avec gestion des null
             existingProduct.setVatRate(Optional.ofNullable(newData.getVatRate()).map(String::trim).orElse(existingProduct.getVatRate()));

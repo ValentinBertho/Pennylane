@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
         classes = @ConstructorResult(
                 targetClass = Product.class,
                 columns = {
-                        @ColumnResult(name = "id", type = Integer.class),
+                        @ColumnResult(name = "id", type = Long.class),
                         @ColumnResult(name = "externalReference", type = String.class),
                         @ColumnResult(name = "reference", type = String.class),
                         @ColumnResult(name = "label", type = String.class),

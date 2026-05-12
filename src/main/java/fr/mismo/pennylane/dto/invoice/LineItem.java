@@ -11,7 +11,7 @@ import java.time.OffsetDateTime;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class LineItem {
     @JsonProperty("product_id")
-    private int productId;
+    private Long productId;
 
     @JsonProperty("label")
     private String label;

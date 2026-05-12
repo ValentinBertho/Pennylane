@@ -26,11 +26,11 @@ public class FactureDTO {
     private Integer noLigne;        // Numéro de la ligne
     private String typeLigne;       // Type de ligne (Produit, Service, etc.)
     private Integer noProduit;      // Numéro du produit
-    private Integer idProduit;      // Id du produit
+    private String idProduit;       // Id du produit (PENNYLANE_ID stocké en VARCHAR)
     private String desCom;          // Description du produit ou service
     private String codTaxe;          // code taxe du produit
     private Double tauxTaxe;        // Taux de taxe
-    private Integer qteFac;         // Quantité facturée
+    private String qteFac;         // Quantité facturée
     private Double puvb;            // Prix unitaire
     private Double puNet;           // Prix unitaire
     private Double totalNet;        // Prix unitaire

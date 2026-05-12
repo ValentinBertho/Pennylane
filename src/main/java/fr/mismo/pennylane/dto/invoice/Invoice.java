@@ -151,14 +151,14 @@ public class Invoice {
     @Data
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class Customer {
-        private String id;
+        private Long id;
         private String url;
     }
 
     @Data
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class Supplier {
-        private String id;
+        private Long id;
         private String url;
     }
 

@@ -10,7 +10,7 @@ import lombok.Data;
 public class Product {
 
     @JsonProperty("id")
-    private Integer id;
+    private Long id;
 
     @JsonProperty("label")
     private String label;
